@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Gráficos - Avaliações e Indicações</title>
+    <style>
+        :root {
+            --primary-blue: #1e3a5f;
+            --secondary-blue: #3A6EA5;
+            --light-bg: #f4f7f6;
+            --white: #ffffff;
+            --gray: #6c757d;
+            --danger: #dc3545;
+            --hover-blue: #2c5282;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .user-badge {
+            background: #ffd700;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+
+        .logout-btn {
+            color: var(--white);
+            text-decoration: none;
+            padding: 6px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            transition: var(--transition);
+            font-size: 13px;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--white);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            flex: 1;
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .welcome-section h2 {
+            color: var(--primary-blue);
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .welcome-section p {
+            color: var(--gray);
+            font-size: 16px;
+        }
+
+        .menu-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            text-decoration: none;
+            color: #1f2937;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .menu-card h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--gray);
+            font-size: 12px;
+            border-top: 1px solid #e9ecef;
+            margin-top: auto;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <h1>Avaliações e Indicações</h1>
+        <div class="nav-right">
+            <button class="theme-toggle-btn logout-btn" onclick="toggleDarkMode()" style="margin-right: 15px; background: transparent; cursor: pointer;">🌙 Modo Escuro</button>
+            <div class="user-info">
+                <span class="user-name">Bem-vindo, {{ nome }}</span>
+                <span class="user-badge">{{ 'Admin' if is_master else 'Gestor' }}</span>
+            </div>
+            <a href="{{ url_for('index') }}" class="logout-btn">Voltar ao Menu</a>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Sair</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="welcome-section">
+            <h2>Painel de Analíticos & Gráficos</h2>
+            <p>Métricas globais e consumo das vagas aprovadas.</p>
+        </div>
+
+        <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 40px;">
+            <div class="menu-card" style="padding: 20px; text-decoration: none; cursor: default; transform: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <h3 style="font-size:16px; margin-bottom: 15px; text-align: center; color: var(--primary-blue);">Status de Indicações</h3>
+                <div style="height: 350px; position: relative;"><canvas id="statusChart"></canvas></div>
+            </div>
+            {% if is_master %}
+            <div class="menu-card" style="padding: 20px; text-decoration: none; cursor: default; transform: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <h3 style="font-size:16px; margin-bottom: 15px; text-align: center; color: var(--primary-blue);">Ocupação Headcount Global vs Saldo</h3>
+                <div style="height: 350px; position: relative;"><canvas id="headcountChart"></canvas></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="footer">
+        © 2026 DeMillus S.A. | Sistema de Indicações para o Comitê
+    </div>
+
+    <!-- DARK MODE SCRIPT -->
+    <script>
+        const darkModeStyles = `
+            body.dark-mode { background-color: #121212 !important; color: #e0e0e0 !important; }
+            body.dark-mode .navbar { background-color: #0d1b2a !important; }
+            body.dark-mode .container, body.dark-mode .menu-card {
+                background-color: #1e1e1e !important; box-shadow: 0 4px 6px rgba(0,0,0,0.5) !important;
+                color: #e0e0e0 !important; border-color: #333 !important;
+            }
+            body.dark-mode .menu-card h3 { color: #e0e0e0 !important; }
+            body.dark-mode .logout-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--white); }
+        `;
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = darkModeStyles;
+        document.head.appendChild(styleSheet);
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+                btn.innerHTML = isDark ? '☀️ Modo Claro' : '🌙 Modo Escuro';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+            updateThemeIcon(document.body.classList.contains('dark-mode'));
+        });
+    </script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const rawStatusCounts = '{{ status_counts | safe }}';
+            const rawHeadcountData = '{{ headcount_data | safe }}';
+            
+            const isDarkMode = localStorage.getItem('theme') === 'dark';
+            const textColor = isDarkMode ? '#e0e0e0' : '#333';
+            Chart.defaults.color = textColor;
+
+            if (rawStatusCounts && rawStatusCounts !== "null") {
+                const statusCounts = JSON.parse(rawStatusCounts);
+                const ctxStatus = document.getElementById('statusChart').getContext('2d');
+                new Chart(ctxStatus, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Em Análise', 'Em Comitê', 'Aprovado', 'Reprovado'],
+                        datasets: [{
+                            data: [
+                                statusCounts['Em análise'] || 0,
+                                statusCounts['Em Comitê'] || 0,
+                                statusCounts['Aprovado'] || 0,
+                                statusCounts['Reprovado'] || 0
+                            ],
+                            backgroundColor: ['#F59E0B', '#3A6EA5', '#10B981', '#EF4444'],
+                            borderWidth: 1,
+                            borderColor: isDarkMode ? '#1e1e1e' : '#fff'
+                        }]
+                    },
+                    options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+
+            if (rawHeadcountData && rawHeadcountData !== "null") {
+                const hcData = JSON.parse(rawHeadcountData);
+                const ctxHc = document.getElementById('headcountChart');
+                if (ctxHc) {
+                    new Chart(ctxHc.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Saldo Livre', 'Vagas Utilizadas'],
+                            datasets: [{
+                                data: [hcData.livre, hcData.utilizado],
+                                backgroundColor: ['#10B981', '#dc3545'],
+                                borderWidth: 1,
+                                borderColor: isDarkMode ? '#1e1e1e' : '#fff'
+                            }]
+                        },
+                        options: { 
+                            maintainAspectRatio: false, 
+                            plugins: { legend: { position: 'bottom' } }, 
+                            circumference: 180, 
+                            rotation: 270 
+                        }
+                    });
+                }
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='notificacoes.js') }}"></script>
+</body>
+</html>

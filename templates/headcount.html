@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Headcount - Vagas Disponíveis</title>
+    <style>
+        :root {
+            --primary-blue: #1e3a5f;
+            --secondary-blue: #3A6EA5;
+            --light-bg: #f4f7f6;
+            --white: #ffffff;
+            --border-color: #dee2e6;
+            --success: #28a745;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .navbar {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            background: var(--secondary-blue);
+            color: var(--white);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .btn:hover {
+            background: #2c5282;
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .container {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            background: var(--white);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--primary-blue);
+            margin-bottom: 2px;
+        }
+
+        .filter-select {
+            padding: 5px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 12px;
+            min-width: 150px;
+        }
+
+        .table-wrapper {
+            flex: 1;
+            overflow: auto;
+            background: var(--white);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            border-collapse: collapse;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        th,
+        td {
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        /* Master specific align left for non-numbers */
+        td.text-col {
+            text-align: left;
+        }
+
+        thead th {
+            background-color: #5b9bd5;
+            /* Cor similar ao print Excel */
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        /* Congelar a primeira linha extra do cabeçalho */
+        thead tr.header-months th {
+            top: 0;
+        }
+
+        thead tr.header-desc th {
+            top: 26px;
+            /* Offset the previous row */
+        }
+
+        .t-bg {
+            background-color: #DCE6F1;
+        }
+
+        /* Tons de Azul Claro para Totais */
+
+        /* Destacar as colunas dos meses */
+        .col-mes {
+            width: 45px;
+        }
+
+        .input-qtd {
+            width: 40px;
+            padding: 2px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            font-size: 11px;
+            border-radius: 2px;
+        }
+
+        .input-qtd:focus {
+            outline: rgb(0, 120, 215) solid 1px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <h2>Headcount 2026 (Usuário: {{ nome|default("Visitante") }})</h2>
+        <div>
+
+            {% if is_master %}
+            <button class="btn btn-success" onclick="salvarHC()">
+
+                <!-- SALVAR -->
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                </svg>
+
+                Salvar Alterações
+            </button>
+            {% endif %}
+
+            <button class="btn theme-toggle-btn" onclick="toggleDarkMode()" style="margin-left: 10px; background: transparent; border: 1px solid white;">🌙 Modo Escuro</button>
+            <a href="/" class="btn" style="margin-left: 10px;">
+
+                <!-- VOLTAR -->
+                <svg viewBox="0 0 24 24">
+                    <path d="M15 18l-6-6 6-6" />
+                    <line x1="9" y1="12" x2="21" y2="12" />
+                </svg>
+
+                Voltar Menu
+            </a>
+
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- FILTROS DROPDOWN -->
+        <div class="filters">
+            {% if is_master %}
+            <div class="filter-group">
+                <label>Nome da Empresa</label>
+                <select id="flt_empresa" class="filter-select" onchange="runFilters()">
+                    <option value="">TODOS</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Nome do Gestor</label>
+                <select id="flt_gestor" class="filter-select" onchange="runFilters()">
+                    <option value="">TODOS</option>
+                </select>
+            </div>
+            {% endif %}
+            <div class="filter-group">
+                <label>Nome do Setor</label>
+                <select id="flt_setor" class="filter-select" onchange="runFilters()">
+                    <option value="">TODOS</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Macro Área</label>
+                <select id="flt_macro" class="filter-select" onchange="runFilters()">
+                    <option value="">TODOS</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Nome da Função</label>
+                <select id="flt_funcao" class="filter-select" onchange="runFilters()">
+                    <option value="">TODOS</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- TABELA -->
+        <div class="table-wrapper">
+            <table id="hcTable">
+                <thead>
+                    <tr class="header-months">
+                        {% if is_master %}
+                        <th colspan="11"></th>
+                        {% else %}
+                        <th colspan="4"></th>
+                        {% endif %}
+                        <th class="t-bg">jan/26</th>
+                        <th class="t-bg">fev/26</th>
+                        <th class="t-bg">mar/26</th>
+                        <th class="t-bg">abr/26</th>
+                        <th class="t-bg">mai/26</th>
+                        <th class="t-bg">jun/26</th>
+                        <th class="t-bg">jul/26</th>
+                        <th class="t-bg">ago/26</th>
+                        <th class="t-bg">set/26</th>
+                        <th class="t-bg">out/26</th>
+                        <th class="t-bg">nov/26</th>
+                        <th class="t-bg">dez/26</th>
+                    </tr>
+                    <tr class="header-desc">
+                        {% if is_master %}
+                        <th>CÓD. EMPRESA</th>
+                        <th>NOME EMPRESA</th>
+                        <th>EMPRESA (HC)</th>
+                        <th>Cód. Setor</th>
+                        <th>Matrícula Gestor</th>
+                        <th>GESTOR</th>
+                        <th>Atividade (HC)</th>
+                        {% endif %}
+                        <th>Nome Setor</th>
+                        <th>MACRO ÁREA (RHBRC)</th>
+                        <th>Cód Função</th>
+                        <th>Descrição da Função</th>
+
+                        <!-- Month Headers -->
+                        <th>Qtd 01/26</th>
+                        <th>Qtd 02/26</th>
+                        <th>Qtd 03/26</th>
+                        <th>Qtd 04/26</th>
+                        <th>Qtd 05/26</th>
+                        <th>Qtd 06/26</th>
+                        <th>Qtd 07/26</th>
+                        <th>Qtd 08/26</th>
+                        <th>Qtd 09/26</th>
+                        <th>Qtd 10/26</th>
+                        <th>Qtd 11/26</th>
+                        <th>Qtd 12/26</th>
+                    </tr>
+                </thead>
+                <tbody id="hcBody">
+                    {% for h in hcs %}
+                    <tr class="hc-row" data-id="{{ h.id }}">
+                        <!-- Dados do Registro Identificadores Ocultos -->
+                        <td style="display:none;" class="df-empresa">{{ h.nome_empresa }}</td>
+                        <td style="display:none;" class="df-gestor">{{ h.gestor }}</td>
+                        <td style="display:none;" class="df-setor">{{ h.nome_setor }}</td>
+                        <td style="display:none;" class="df-macro">{{ h.macro_area }}</td>
+                        <td style="display:none;" class="df-funcao">{{ h.desc_funcao }}</td>
+
+                        {% if is_master %}
+                        <td>{{ h.cod_empresa }}</td>
+                        <td class="text-col">{{ h.nome_empresa }}</td>
+                        <td class="text-col">{{ h.empresa_hc }}</td>
+                        <td>{{ h.cod_setor }}</td>
+                        <td>{{ h.matricula_gestor }}</td>
+                        <td class="text-col">{{ h.gestor }}</td>
+                        <td class="text-col">{{ h.atividade_hc }}</td>
+                        {% endif %}
+                        <td class="text-col">{{ h.nome_setor }}</td>
+                        <td class="text-col">{{ h.macro_area }}</td>
+                        <td>{{ h.cod_funcao }}</td>
+                        <td class="text-col">{{ h.desc_funcao }}</td>
+
+                        <!-- Qtd Meses -->
+                        {% for pt in [h.qtd_01, h.qtd_02, h.qtd_03, h.qtd_04, h.qtd_05, h.qtd_06, h.qtd_07, h.qtd_08,
+                        h.qtd_09, h.qtd_10, h.qtd_11, h.qtd_12] %}
+                        <td class="col-mes">
+                            {% if is_master %}
+                            <input type="number" class="input-qtd" min="0" data-idx="{{ loop.index }}" value="{{ pt }}"
+                                onchange="markDirty(this)">
+                            {% else %}
+                            {{ pt }}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 1. POPULATE INITIAL DROPDOWNS E CONFIGURA CASCATA
+        function updateSelectOptions(selectId, className, activeRows) {
+            const selectEl = document.getElementById(selectId);
+            if (!selectEl) return;
+
+            const currentValue = selectEl.value;
+            selectEl.innerHTML = '<option value="">TODOS</option>';
+
+            const uniqueValues = new Set();
+            activeRows.forEach(tr => {
+                const textNode = tr.querySelector('.' + className);
+                if (textNode) {
+                    const txt = textNode.textContent.trim();
+                    if (txt) uniqueValues.add(txt);
+                }
+            });
+
+            let valueStillExists = false;
+            Array.from(uniqueValues).sort().forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = val;
+                if (val === currentValue) {
+                    opt.selected = true;
+                    valueStillExists = true;
+                }
+                selectEl.appendChild(opt);
+            });
+
+            if (!valueStillExists) {
+                selectEl.value = "";
+            }
+        }
+
+        window.onload = function () {
+            const allRows = Array.from(document.querySelectorAll('.hc-row'));
+            if (document.getElementById('flt_empresa')) {
+                updateSelectOptions('flt_empresa', 'df-empresa', allRows);
+            } else {
+                // Para usuário simples que não tem empresa visível, popula gestor/setor inicial
+                if (document.getElementById('flt_gestor')) updateSelectOptions('flt_gestor', 'df-gestor', allRows);
+                updateSelectOptions('flt_setor', 'df-setor', allRows);
+                updateSelectOptions('flt_macro', 'df-macro', allRows);
+                updateSelectOptions('flt_funcao', 'df-funcao', allRows);
+            }
+            runFilters();
+        };
+
+        // 2. FILTERING LOGIC COM CASCATA (EMPRESA -> GESTOR -> SETOR -> MACRO -> FUNCAO)
+        function runFilters() {
+            const fEmp = document.getElementById('flt_empresa') ? document.getElementById('flt_empresa').value : '';
+            const fGest = document.getElementById('flt_gestor') ? document.getElementById('flt_gestor').value : '';
+            const fSetor = document.getElementById('flt_setor').value;
+            const fMacro = document.getElementById('flt_macro').value;
+            const fFunc = document.getElementById('flt_funcao').value;
+
+            const allRows = Array.from(document.querySelectorAll('.hc-row'));
+
+            // Resgata os registros que atendem aos filtros superiores passados
+            const getMatchingRows = (checkEmp, checkGest, checkSetor, checkMacro, checkFunc) => {
+                return allRows.filter(row => {
+                    const matchEmp = !checkEmp || !fEmp || row.querySelector('.df-empresa').textContent.trim() === fEmp;
+                    const matchGest = !checkGest || !fGest || row.querySelector('.df-gestor').textContent.trim() === fGest;
+                    const matchSetor = !checkSetor || !fSetor || row.querySelector('.df-setor').textContent.trim() === fSetor;
+                    const matchMacro = !checkMacro || !fMacro || row.querySelector('.df-macro').textContent.trim() === fMacro;
+                    const matchFunc = !checkFunc || !fFunc || row.querySelector('.df-funcao').textContent.trim() === fFunc;
+                    return matchEmp && matchGest && matchSetor && matchMacro && matchFunc;
+                });
+            };
+
+            // Atualiza as opções dependendo das instâncias superiores
+            if (document.getElementById('flt_gestor')) {
+                updateSelectOptions('flt_gestor', 'df-gestor', getMatchingRows(true, false, false, false, false));
+            }
+            updateSelectOptions('flt_setor', 'df-setor', getMatchingRows(true, true, false, false, false));
+            updateSelectOptions('flt_macro', 'df-macro', getMatchingRows(true, true, true, false, false));
+            updateSelectOptions('flt_funcao', 'df-funcao', getMatchingRows(true, true, true, true, false));
+
+            // Aplica visibilidade final após os dropdowns serem possivelmente limpos
+            const finalEmp = document.getElementById('flt_empresa') ? document.getElementById('flt_empresa').value : '';
+            const finalGest = document.getElementById('flt_gestor') ? document.getElementById('flt_gestor').value : '';
+            const finalSetor = document.getElementById('flt_setor').value;
+            const finalMacro = document.getElementById('flt_macro').value;
+            const finalFunc = document.getElementById('flt_funcao').value;
+
+            allRows.forEach(row => {
+                const matchEmp = !finalEmp || row.querySelector('.df-empresa').textContent.trim() === finalEmp;
+                const matchGest = !finalGest || row.querySelector('.df-gestor').textContent.trim() === finalGest;
+                const matchSetor = !finalSetor || row.querySelector('.df-setor').textContent.trim() === finalSetor;
+                const matchMacro = !finalMacro || row.querySelector('.df-macro').textContent.trim() === finalMacro;
+                const matchFunc = !finalFunc || row.querySelector('.df-funcao').textContent.trim() === finalFunc;
+
+                if (matchEmp && matchGest && matchSetor && matchMacro && matchFunc) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // 3. MASTER SAVING
+        function markDirty(input) {
+            input.closest('.hc-row').classList.add('dirty');
+        }
+
+        function salvarHC() {
+            const dirtyRows = document.querySelectorAll('.hc-row.dirty');
+            const updates = [];
+
+            dirtyRows.forEach(row => {
+                const id = row.getAttribute('data-id');
+                const rowUpdate = { id: id };
+
+                const inputs = row.querySelectorAll('.input-qtd');
+                inputs.forEach(ip => {
+                    const monthId = parseInt(ip.getAttribute('data-idx'));
+                    const key = 'qtd_' + (monthId < 10 ? '0' + monthId : monthId);
+                    rowUpdate[key] = ip.value;
+                });
+
+                updates.push(rowUpdate);
+            });
+
+            if (updates.length === 0) {
+                alert("Nenhuma modificação foi feita.");
+                return;
+            }
+
+            fetch('/api/salvar_headcount', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ updates: updates })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('As atualizações de vagas foram salvas!');
+                        dirtyRows.forEach(r => r.classList.remove('dirty'));
+                    } else {
+                        alert('Erro: ' + data.error);
+                    }
+                })
+                .catch(e => alert("Erro ao salvar: " + e));
+        }
+    </script>
+    <!-- DARK MODE SCRIPT -->
+    <script>
+        const darkModeStyles = `
+            body.dark-mode { background-color: #121212 !important; color: #e0e0e0 !important; }
+            body.dark-mode .navbar, body.dark-mode .header { background-color: #0d1b2a !important; }
+            body.dark-mode .container, body.dark-mode .card, body.dark-mode .form-container, 
+            body.dark-mode .table-container, body.dark-mode .filters, body.dark-mode .table-wrapper,
+            body.dark-mode .modal-content, body.dark-mode .pagination, body.dark-mode .menu-card {
+                background-color: #1e1e1e !important; box-shadow: 0 4px 6px rgba(0,0,0,0.5) !important;
+                color: #e0e0e0 !important; border-color: #333 !important;
+            }
+            body.dark-mode .menu-card h3 { color: #e0e0e0 !important; }
+            body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+                background-color: #2d2d2d !important; color: #ffffff !important; border: 1px solid #444 !important;
+            }
+            body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #444 !important; color: #e0e0e0 !important; }
+            body.dark-mode th { background-color: #1a2a3a !important; }
+            body.dark-mode tbody tr:nth-child(even), body.dark-mode .row-even { background-color: #1a1a1a !important; }
+            body.dark-mode tbody tr:nth-child(odd), body.dark-mode .row-odd { background-color: #222 !important; }
+            body.dark-mode tbody tr:hover { background-color: #333 !important; }
+            body.dark-mode .t-bg { background-color: #2a3b4c !important; }
+            body.dark-mode .info-box, body.dark-mode .highlight, body.dark-mode .warning-box, 
+            body.dark-mode .danger-box, body.dark-mode .success-box, body.dark-mode .status-badge {
+                background-color: #2d2d2d !important; border-color: #555 !important; color: #e0e0e0 !important;
+            }
+            body.dark-mode .btn-outline { border-color: #aaa !important; color: #aaa !important; }
+            body.dark-mode .btn-outline:hover { background-color: #aaa !important; color: #121212 !important; }
+            /* Modal / Inputs inside Modal */
+            body.dark-mode .modal { background: rgba(0,0,0,0.8) !important; }
+            body.dark-mode .modal-body { color: #ccc !important; }
+            body.dark-mode .close-btn { color: #ddd !important; }
+            
+            body.dark-mode label { color: #e0e0e0 !important; } /* Fix label colors in headcount filter */
+        `;
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = darkModeStyles;
+        document.head.appendChild(styleSheet);
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+                btn.innerHTML = isDark ? '☀️ Modo Claro' : '🌙 Modo Escuro';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+            updateThemeIcon(document.body.classList.contains('dark-mode'));
+        });
+    </script>
+    <script src="{{ url_for('static', filename='notificacoes.js') }}"></script>
+</body>
+
+</html>
