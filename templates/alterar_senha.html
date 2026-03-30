@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alterar Senha - Sistema de Indicações</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e8f1f8 0%, #f5f3f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 440px;
+        }
+        .lock-icon {
+            width: 60px; height: 60px; margin: 0 auto 16px;
+            background: #fff7ed; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .lock-icon svg {
+            width: 30px; height: 30px; stroke: #ea580c;
+            fill: none; stroke-width: 2;
+        }
+        h2 {
+            color: #1e3a5f;
+            margin-bottom: 8px;
+            text-align: center;
+            font-size: 22px;
+        }
+        .subtitle {
+            text-align: center; color: #64748b; font-size: 14px;
+            margin-bottom: 24px; line-height: 1.4;
+        }
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #1e3a5f;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #2c5f8d;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #1e3a5f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn:hover { background: #2c5f8d; }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .info-box {
+            background: #fffbeb;
+            border: 1px solid #fbbf24;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            text-align: center;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="lock-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                <circle cx="12" cy="16" r="1"/>
+            </svg>
+        </div>
+        <h2>Alterar Senha</h2>
+        <p class="subtitle">Por segurança, defina uma nova senha pessoal para continuar.</p>
+
+        <div class="info-box">
+            ⚠️ Este é seu primeiro acesso ou sua senha foi resetada pelo administrador.
+        </div>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/alterar_senha">
+            <div class="form-group">
+                <label>Nova Senha</label>
+                <input type="password" name="nova_senha" required placeholder="Mínimo 4 caracteres" minlength="4">
+            </div>
+            <div class="form-group">
+                <label>Confirmar Nova Senha</label>
+                <input type="password" name="confirmar_senha" required placeholder="Repita a nova senha">
+            </div>
+            <button type="submit" class="btn">Salvar Nova Senha</button>
+        </form>
+    </div>
+</body>
+</html>

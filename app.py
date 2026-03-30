@@ -4,7 +4,7 @@ import json
 
 app = Flask(__name__)
 app.secret_key = 'chave_super_secreta_demillus'
-MASTERS = ['1-082959', '1-082361', '1-079254']
+MASTERS_INICIAIS = ['1-082959', '1-082361', '1-079254']
 
 def get_db_connection():
     import os
@@ -40,6 +40,32 @@ def get_db_connection():
             data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS auditoria (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            indicacao_id INTEGER,
+            matricula TEXT,
+            nome TEXT,
+            acao TEXT,
+            data_hora DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    # Adicionar coluna tipo se não existir
+    try:
+        conn.execute("ALTER TABLE usuarios ADD COLUMN tipo TEXT DEFAULT 'simples'")
+        for m in MASTERS_INICIAIS:
+            conn.execute("UPDATE usuarios SET tipo = 'master' WHERE matricula = ?", (m,))
+    except:
+        pass
+    # Migrar valores antigos: garantir que tipo nunca é NULL
+    conn.execute("UPDATE usuarios SET tipo = 'simples' WHERE tipo IS NULL OR tipo = ''")
+    # Adicionar coluna senha_resetada se não existir
+    try:
+        conn.execute("ALTER TABLE usuarios ADD COLUMN senha_resetada INTEGER DEFAULT 1")
+        # Existentes NÃO devem ser forçados a trocar - somente novos ou quando admin resetar
+        conn.execute("UPDATE usuarios SET senha_resetada = 0")
+    except:
+        pass
     conn.commit()
     
     return conn
@@ -50,7 +76,8 @@ def atualizar_notificacao_master(conn, triggered_by_master=False):
     pendentes = pendentes_row['qtd']
     
     msg = f"Você tem {pendentes} Novas Indicações aguardando análise! <br><br><a href='/visualizar' style='color:#3A6EA5; text-decoration:underline; font-weight:bold;'>Visualizar agora</a>"
-    masters = ['1-082959', '1-082361', '1-079254']
+    masters_rows = conn.execute("SELECT matricula FROM usuarios WHERE tipo = 'master'").fetchall()
+    masters = [r['matricula'] for r in masters_rows]
     
     for m in masters:
         existe = conn.execute("SELECT id, lida FROM notificacoes WHERE matricula = ? AND mensagem LIKE 'Você tem % Novas Indicações aguardando análise!%'", (m,)).fetchone()
@@ -69,12 +96,15 @@ def atualizar_notificacao_master(conn, triggered_by_master=False):
 def index():
     if 'matricula' not in session:
         return redirect(url_for('login'))
-    return render_template('dashboard.html', nome=session.get('nome'), is_master=session.get('is_master', False))
+    return render_template('dashboard.html', nome=session.get('nome'), is_master=session.get('is_master', False), tipo=session.get('tipo', 'simples'))
 
 @app.route('/graficos')
 def graficos():
     if 'matricula' not in session:
         return redirect(url_for('login'))
+    # Simples não tem acesso a gráficos
+    if session.get('tipo', 'simples') == 'simples':
+        return redirect(url_for('index'))
         
     is_master = session.get('is_master', False)
     matricula = session.get('matricula')
@@ -154,6 +184,9 @@ def visualizar():
 def headcount():
     if 'matricula' not in session:
         return redirect(url_for('login'))
+    # Simples não tem acesso ao headcount
+    if session.get('tipo', 'simples') == 'simples':
+        return redirect(url_for('index'))
         
     is_master = session.get('is_master', False)
     matricula = session.get('matricula')
@@ -350,12 +383,38 @@ def login():
         if user:
             session['matricula'] = user['matricula']
             session['nome'] = user['nome']
-            session['is_master'] = user['matricula'] in MASTERS
+            tipo_usuario = user['tipo'] if user['tipo'] else ('master' if user['matricula'] in MASTERS_INICIAIS else 'simples')
+            session['tipo'] = tipo_usuario
+            session['is_master'] = (tipo_usuario == 'master')
+            session['is_intermediario'] = (tipo_usuario == 'intermediario')
+            # Verificar se precisa trocar a senha (primeiro login ou reset pelo admin)
+            if user['senha_resetada'] if 'senha_resetada' in user.keys() else False:
+                session['forcar_troca_senha'] = True
+                return redirect(url_for('alterar_senha'))
             return redirect(url_for('index'))
         else:
             return render_template('login.html', error='Matrícula ou senha inválidos')
             
     return render_template('login.html')
+
+@app.route('/alterar_senha', methods=['GET', 'POST'])
+def alterar_senha():
+    if 'matricula' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        nova_senha = request.form.get('nova_senha', '').strip()
+        confirmar = request.form.get('confirmar_senha', '').strip()
+        if len(nova_senha) < 4:
+            return render_template('alterar_senha.html', error='A senha deve ter no mínimo 4 caracteres.')
+        if nova_senha != confirmar:
+            return render_template('alterar_senha.html', error='As senhas não coincidem.')
+        conn = get_db_connection()
+        conn.execute('UPDATE usuarios SET senha = ?, senha_resetada = 0 WHERE matricula = ?', (nova_senha, session['matricula']))
+        conn.commit()
+        conn.close()
+        session.pop('forcar_troca_senha', None)
+        return redirect(url_for('index'))
+    return render_template('alterar_senha.html')
 
 @app.route('/logout')
 def logout():
@@ -424,7 +483,7 @@ def salvar_indicacoes():
         gestor_destino_mat = resp_destino_val.split(' - ')[0] if ' - ' in resp_destino_val else resp_destino_val
         nome_gestor_dest = resp_destino_val.split(' - ')[1] if ' - ' in resp_destino_val else resp_destino_val
         
-        conn.execute('''
+        cursor = conn.execute('''
             INSERT INTO indicacoes_item 
             (gestor_origem_mat, nome_gestor_origem, gestor_destino_mat, nome_gestor_destino,
             matricula_empregado, nome_empregado, setor_destino, cargo_atual, cargo_proposto,
@@ -435,6 +494,9 @@ def salvar_indicacoes():
             matr_emp, nome_emp, setor_dest, cargo_atual, cargo_prop, mes_ano_str,
             json.dumps(row, ensure_ascii=False)
         ))
+        novo_id = cursor.lastrowid
+        conn.execute('INSERT INTO auditoria (indicacao_id, matricula, nome, acao) VALUES (?, ?, ?, ?)',
+                     (novo_id, matricula_origem, nome_origem, f'Criou a indicação do empregado {nome_emp} para {cargo_prop}'))
         
     atualizar_notificacao_master(conn, triggered_by_master=False)
     conn.commit()
@@ -457,21 +519,40 @@ def atualizar_status():
         obs = upd.get('observacao', '')
         
         if item_id and status:
-            if status in ['Aprovado', 'Reprovado']:
-                item = conn.execute("SELECT gestor_origem_mat, gestor_destino_mat, nome_empregado, cargo_proposto FROM indicacoes_item WHERE id = ?", (item_id,)).fetchone()
-                if item:
+            item = conn.execute("SELECT status as status_antigo, gestor_origem_mat, gestor_destino_mat, nome_empregado, cargo_proposto FROM indicacoes_item WHERE id = ?", (item_id,)).fetchone()
+            if item:
+                status_antigo = item['status_antigo']
+                if status in ['Aprovado', 'Reprovado']:
                     msg = f"A indicação de {item['nome_empregado']} para {item['cargo_proposto']} foi {status.upper()}."
                     gestores = set([item['gestor_origem_mat'], item['gestor_destino_mat']])
                     for gestor in gestores:
                         if gestor:
                             conn.execute("INSERT INTO notificacoes (matricula, mensagem) VALUES (?, ?)", (gestor, msg))
-                            
+                
+                acao_parts = []
+                if status_antigo != status:
+                    acao_parts.append(f'Alterou status de "{status_antigo}" para "{status}"')
+                if obs:
+                    acao_parts.append(f'Motivo: {obs}')
+                acao_text = '. '.join(acao_parts) if acao_parts else f'Atualizou para "{status}"'
+                conn.execute('INSERT INTO auditoria (indicacao_id, matricula, nome, acao) VALUES (?, ?, ?, ?)',
+                             (item_id, session['matricula'], session.get('nome', ''), acao_text))
+                             
             conn.execute('UPDATE indicacoes_item SET status = ?, observacao = ? WHERE id = ?',
                          (status, obs, item_id))
     atualizar_notificacao_master(conn, triggered_by_master=True)
     conn.commit()
     conn.close()
     return jsonify({'success': True, 'message': 'Status atualizados com sucesso!'})
+
+@app.route('/api/auditoria/<int:indicacao_id>', methods=['GET'])
+def get_auditoria(indicacao_id):
+    if 'matricula' not in session:
+        return jsonify({'error': 'Não autenticado'}), 401
+    conn = get_db_connection()
+    logs = conn.execute('SELECT * FROM auditoria WHERE indicacao_id = ? ORDER BY data_hora ASC', (indicacao_id,)).fetchall()
+    conn.close()
+    return jsonify([dict(l) for l in logs])
 
 @app.route('/api/notificacoes', methods=['GET'])
 def get_notificacoes():
@@ -519,6 +600,81 @@ def excluir_indicacoes():
     conn.close()
     
     return jsonify({'success': True, 'message': 'Excluído com sucesso!'})
+
+# ========== ADMIN: Gest\u00e3o de Usu\u00e1rios ==========
+@app.route('/admin/usuarios')
+def admin_usuarios():
+    if 'matricula' not in session or not session.get('is_master'):
+        return redirect(url_for('index'))
+    conn = get_db_connection()
+    usuarios = conn.execute("SELECT matricula, nome, senha, COALESCE(tipo, 'simples') as tipo FROM usuarios ORDER BY nome").fetchall()
+    conn.close()
+    return render_template('admin_usuarios.html', usuarios=usuarios, nome=session.get('nome'), is_master=True)
+
+@app.route('/api/admin/criar_usuario', methods=['POST'])
+def criar_usuario():
+    if 'matricula' not in session or not session.get('is_master'):
+        return jsonify({'error': 'N\u00e3o autorizado'}), 403
+    dados = request.get_json()
+    matricula = dados.get('matricula', '').strip()
+    nome = dados.get('nome', '').strip()
+    senha = dados.get('senha', '').strip()
+    tipo = dados.get('tipo', 'simples')
+    if not matricula or not nome or not senha:
+        return jsonify({'error': 'Preencha todos os campos obrigat\u00f3rios.'}), 400
+    conn = get_db_connection()
+    existe = conn.execute("SELECT matricula FROM usuarios WHERE matricula = ?", (matricula,)).fetchone()
+    if existe:
+        conn.close()
+        return jsonify({'error': 'Matr\u00edcula j\u00e1 cadastrada no sistema.'}), 400
+    conn.execute("INSERT INTO usuarios (matricula, nome, senha, tipo) VALUES (?, ?, ?, ?)", (matricula, nome, senha, tipo))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': f'Usu\u00e1rio {nome} criado com sucesso!'})
+
+@app.route('/api/admin/alterar_tipo', methods=['POST'])
+def alterar_tipo_usuario():
+    if 'matricula' not in session or not session.get('is_master'):
+        return jsonify({'error': 'N\u00e3o autorizado'}), 403
+    dados = request.get_json()
+    matricula = dados.get('matricula')
+    novo_tipo = dados.get('tipo')
+    if not matricula or novo_tipo not in ['master', 'intermediario', 'simples']:
+        return jsonify({'error': 'Dados inv\u00e1lidos'}), 400
+    conn = get_db_connection()
+    conn.execute("UPDATE usuarios SET tipo = ? WHERE matricula = ?", (novo_tipo, matricula))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': f'Tipo do usu\u00e1rio alterado para {novo_tipo.upper()}!'})
+
+@app.route('/api/admin/excluir_usuario', methods=['POST'])
+def excluir_usuario():
+    if 'matricula' not in session or not session.get('is_master'):
+        return jsonify({'error': 'N\u00e3o autorizado'}), 403
+    dados = request.get_json()
+    matricula = dados.get('matricula')
+    if matricula == session['matricula']:
+        return jsonify({'error': 'Voc\u00ea n\u00e3o pode excluir a si mesmo!'}), 400
+    conn = get_db_connection()
+    conn.execute("DELETE FROM usuarios WHERE matricula = ?", (matricula,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Usu\u00e1rio exclu\u00eddo!'})
+
+@app.route('/api/admin/resetar_senha', methods=['POST'])
+def resetar_senha():
+    if 'matricula' not in session or not session.get('is_master'):
+        return jsonify({'error': 'Não autorizado'}), 403
+    dados = request.get_json()
+    matricula = dados.get('matricula')
+    nova_senha = dados.get('nova_senha', '').strip()
+    if not matricula or not nova_senha:
+        return jsonify({'error': 'Dados inválidos'}), 400
+    conn = get_db_connection()
+    conn.execute("UPDATE usuarios SET senha = ?, senha_resetada = 1 WHERE matricula = ?", (nova_senha, matricula))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': f'Senha resetada! O usuário precisará alterar no próximo login.'})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

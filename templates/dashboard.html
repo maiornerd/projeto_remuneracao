@@ -275,7 +275,7 @@
             <button class="theme-toggle-btn logout-btn" onclick="toggleDarkMode()" style="margin-right: 15px; background: transparent; cursor: pointer;">🌙 Modo Escuro</button>
             <div class="user-info">
                 <span class="user-name">Bem-vindo, {{ nome }}</span>
-                <span class="user-badge">{{ 'Admin' if is_master else 'Gestor' }}</span>
+                <span class="user-badge">{{ 'Admin' if is_master else ('Intermediário' if tipo == 'intermediario' else 'Gestor') }}</span>
             </div>
             <a href="{{ url_for('logout') }}" class="logout-btn">Sair</a>
         </div>
@@ -324,6 +324,7 @@
                 {% endif %}
             </a>
 
+            {% if tipo != 'simples' %}
             <a href="{{ url_for('headcount') }}" class="menu-card">
                 <div class="icon-circle icon-yellow">
                     <svg viewBox="0 0 24 24">
@@ -341,6 +342,7 @@
                 <span class="permission-text">Visualização Parcial</span>
                 {% endif %}
             </a>
+            {% endif %}
 
             {% if is_master %}
             <a href="{{ url_for('relatorio') }}" class="menu-card">
@@ -358,6 +360,7 @@
             </a>
             {% endif %}
 
+            {% if tipo != 'simples' %}
             <a href="{{ url_for('graficos') }}" class="menu-card">
                 <div class="icon-circle icon-yellow" style="background: #fdf2f8;">
                     <svg viewBox="0 0 24 24" style="stroke: #db2777; fill: none; stroke-linecap: round; stroke-linejoin: round;">
@@ -367,8 +370,25 @@
                 </div>
                 <h3>Painel de Gráficos</h3>
                 <p>Análise de métricas globais e consumo.</p>
-                <span class="permission-text">Todos os Gestores</span>
+                <span class="permission-text">Intermediário e Master</span>
             </a>
+            {% endif %}
+
+            {% if is_master %}
+            <a href="{{ url_for('admin_usuarios') }}" class="menu-card">
+                <div class="icon-circle" style="background: #f0fdf4;">
+                    <svg viewBox="0 0 24 24" style="stroke: #16a34a; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="8.5" cy="7" r="4"/>
+                        <line x1="20" y1="8" x2="20" y2="14"/>
+                        <line x1="23" y1="11" x2="17" y2="11"/>
+                    </svg>
+                </div>
+                <h3>Gestão de Usuários</h3>
+                <p>Criar, promover e gerenciar acessos.</p>
+                <span class="permission-text master">Master Exclusivo</span>
+            </a>
+            {% endif %}
 
         </div>
     </div>
