@@ -135,7 +135,7 @@
         /* Formulário Criar Usuário */
         .form-row {
             display: grid;
-            grid-template-columns: 1fr 2fr 1fr 1fr auto;
+            grid-template-columns: 1fr 2fr 1fr 1fr 1.5fr auto;
             gap: 12px;
             align-items: end;
         }
@@ -419,6 +419,15 @@
                         <option value="master">Master</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Gestor</label>
+                    <select id="novoGestor">
+                        <option value="">-- Sem gestor --</option>
+                        {% for g in gestores %}
+                        <option value="{{ g.matricula }}">{{ g.nome }} ({{ g.matricula }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <button class="btn btn-success" onclick="criarUsuario()" style="height: 36px;">
                     <svg viewBox="0 0 24 24">
                         <line x1="12" y1="5" x2="12" y2="19" />
@@ -445,6 +454,7 @@
                     <tr>
                         <th>Matrícula</th>
                         <th>Nome</th>
+                        <th>Gestor</th>
                         <th>Senha</th>
                         <th>Tipo</th>
                         <th style="text-align: center;">Ações</th>
@@ -455,6 +465,15 @@
                     <tr id="row-{{ u.matricula }}">
                         <td>{{ u.matricula }}</td>
                         <td>{{ u.nome }}</td>
+                        <td>
+                            <select onchange="alterarGestor('{{ u.matricula }}', this.value)"
+                                style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; cursor:pointer; max-width:180px;">
+                                <option value="" {{ 'selected' if not u.gestor_matricula }}>-- Nenhum --</option>
+                                {% for g in gestores %}
+                                <option value="{{ g.matricula }}" {{ 'selected' if u.gestor_matricula == g.matricula }}>{{ g.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
                         <td>{{ u.senha }}</td>
                         <td>
                             <span
@@ -554,6 +573,7 @@
             const nome = document.getElementById('novoNome').value.trim();
             const senha = document.getElementById('novaSenha').value.trim();
             const tipo = document.getElementById('novoTipo').value;
+            const gestor_matricula = document.getElementById('novoGestor').value;
             if (!matricula || !nome || !senha) {
                 showToast('Preencha todos os campos!', true);
                 return;
@@ -561,11 +581,25 @@
             fetch('/api/admin/criar_usuario', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ matricula, nome, senha, tipo })
+                body: JSON.stringify({ matricula, nome, senha, tipo, gestor_matricula })
             }).then(r => r.json()).then(d => {
                 if (d.success) {
                     showToast(d.message, false);
                     setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(d.error, true);
+                }
+            });
+        }
+
+        function alterarGestor(matricula, gestorMatricula) {
+            fetch('/api/admin/alterar_gestor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matricula, gestor_matricula: gestorMatricula })
+            }).then(r => r.json()).then(d => {
+                if (d.success) {
+                    showToast(d.message, false);
                 } else {
                     showToast(d.error, true);
                 }

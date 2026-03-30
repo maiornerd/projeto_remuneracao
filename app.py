@@ -66,6 +66,11 @@ def get_db_connection():
         conn.execute("UPDATE usuarios SET senha_resetada = 0")
     except:
         pass
+    # Adicionar coluna gestor_matricula se não existir
+    try:
+        conn.execute("ALTER TABLE usuarios ADD COLUMN gestor_matricula TEXT DEFAULT ''")
+    except:
+        pass
     conn.commit()
     
     return conn
@@ -387,6 +392,7 @@ def login():
             session['tipo'] = tipo_usuario
             session['is_master'] = (tipo_usuario == 'master')
             session['is_intermediario'] = (tipo_usuario == 'intermediario')
+            session['gestor_matricula'] = user['gestor_matricula'] if 'gestor_matricula' in user.keys() and user['gestor_matricula'] else ''
             # Verificar se precisa trocar a senha (primeiro login ou reset pelo admin)
             if user['senha_resetada'] if 'senha_resetada' in user.keys() else False:
                 session['forcar_troca_senha'] = True
@@ -445,6 +451,9 @@ def get_opcoes():
         opcoes = conn.execute('SELECT DISTINCT cod_empresa, nome_empresa, cod_setor, nome_setor, cod_funcao, nome_funcao FROM opcoes_gestor ORDER BY nome_empresa, nome_setor, nome_funcao').fetchall()
     else:
         alvo = matricula if matricula else session['matricula']
+        # Se o usuário tem um gestor vinculado, usar a matrícula do gestor para buscar opções
+        if not matricula and session.get('gestor_matricula'):
+            alvo = session['gestor_matricula']
         opcoes = conn.execute('SELECT * FROM opcoes_gestor WHERE matricula = ? ORDER BY nome_empresa, nome_setor, nome_funcao', (alvo,)).fetchall()
         
     conn.close()
@@ -607,9 +616,11 @@ def admin_usuarios():
     if 'matricula' not in session or not session.get('is_master'):
         return redirect(url_for('index'))
     conn = get_db_connection()
-    usuarios = conn.execute("SELECT matricula, nome, senha, COALESCE(tipo, 'simples') as tipo FROM usuarios ORDER BY nome").fetchall()
+    usuarios = conn.execute("SELECT u.matricula, u.nome, u.senha, COALESCE(u.tipo, 'simples') as tipo, COALESCE(u.gestor_matricula, '') as gestor_matricula, COALESCE(g.nome, '') as gestor_nome FROM usuarios u LEFT JOIN usuarios g ON u.gestor_matricula = g.matricula ORDER BY u.nome").fetchall()
+    # Lista de gestores distintos da tabela opcoes_gestor
+    gestores = conn.execute("SELECT DISTINCT og.matricula, u.nome FROM opcoes_gestor og LEFT JOIN usuarios u ON og.matricula = u.matricula ORDER BY u.nome").fetchall()
     conn.close()
-    return render_template('admin_usuarios.html', usuarios=usuarios, nome=session.get('nome'), is_master=True)
+    return render_template('admin_usuarios.html', usuarios=usuarios, gestores=gestores, nome=session.get('nome'), is_master=True)
 
 @app.route('/api/admin/criar_usuario', methods=['POST'])
 def criar_usuario():
@@ -620,6 +631,7 @@ def criar_usuario():
     nome = dados.get('nome', '').strip()
     senha = dados.get('senha', '').strip()
     tipo = dados.get('tipo', 'simples')
+    gestor_matricula = dados.get('gestor_matricula', '').strip()
     if not matricula or not nome or not senha:
         return jsonify({'error': 'Preencha todos os campos obrigat\u00f3rios.'}), 400
     conn = get_db_connection()
@@ -627,7 +639,7 @@ def criar_usuario():
     if existe:
         conn.close()
         return jsonify({'error': 'Matr\u00edcula j\u00e1 cadastrada no sistema.'}), 400
-    conn.execute("INSERT INTO usuarios (matricula, nome, senha, tipo) VALUES (?, ?, ?, ?)", (matricula, nome, senha, tipo))
+    conn.execute("INSERT INTO usuarios (matricula, nome, senha, tipo, gestor_matricula) VALUES (?, ?, ?, ?, ?)", (matricula, nome, senha, tipo, gestor_matricula))
     conn.commit()
     conn.close()
     return jsonify({'success': True, 'message': f'Usu\u00e1rio {nome} criado com sucesso!'})
@@ -675,6 +687,21 @@ def resetar_senha():
     conn.commit()
     conn.close()
     return jsonify({'success': True, 'message': f'Senha resetada! O usuário precisará alterar no próximo login.'})
+
+@app.route('/api/admin/alterar_gestor', methods=['POST'])
+def alterar_gestor_usuario():
+    if 'matricula' not in session or not session.get('is_master'):
+        return jsonify({'error': 'Não autorizado'}), 403
+    dados = request.get_json()
+    matricula = dados.get('matricula')
+    gestor_matricula = dados.get('gestor_matricula', '')
+    if not matricula:
+        return jsonify({'error': 'Dados inválidos'}), 400
+    conn = get_db_connection()
+    conn.execute("UPDATE usuarios SET gestor_matricula = ? WHERE matricula = ?", (gestor_matricula, matricula))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Gestor do usuário atualizado com sucesso!'})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
