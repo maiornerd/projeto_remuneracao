@@ -168,7 +168,9 @@ def tabela():
     # Planejador não tem acesso à tabela de indicações
     if session.get('tipo', 'simples') == 'planejador':
         return redirect(url_for('index'))
-    return render_template('formulario.html', nome_gestor=session.get('nome'), is_master=session.get('is_master'))
+    # Se tiver gestor_nome na sessão, usa ele; caso contrário, usa o nome do próprio usuário
+    nome_para_exibir = session.get('gestor_nome') if session.get('gestor_nome') else session.get('nome')
+    return render_template('formulario.html', nome_gestor=nome_para_exibir, is_master=session.get('is_master'))
 
 @app.route('/visualizar')
 def visualizar():
@@ -405,6 +407,15 @@ def login():
             session['is_intermediario'] = (tipo_usuario == 'intermediario')
             session['is_planejador'] = (tipo_usuario == 'planejador')
             session['gestor_matricula'] = user['gestor_matricula'] if 'gestor_matricula' in user.keys() and user['gestor_matricula'] else ''
+            
+            # Buscar nome do gestor se houver gestor_matricula
+            session['gestor_nome'] = ''
+            if session['gestor_matricula']:
+                conn = get_db_connection()
+                g = conn.execute('SELECT nome FROM usuarios WHERE matricula = ?', (session['gestor_matricula'],)).fetchone()
+                conn.close()
+                if g:
+                    session['gestor_nome'] = g['nome']
             # Verificar se precisa trocar a senha (primeiro login ou reset pelo admin)
             if user['senha_resetada'] if 'senha_resetada' in user.keys() else False:
                 session['forcar_troca_senha'] = True
