@@ -275,7 +275,7 @@
             <button class="theme-toggle-btn logout-btn" onclick="toggleDarkMode()" style="margin-right: 15px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg> Modo Escuro</button>
             <div class="user-info">
                 <span class="user-name">Bem-vindo, {{ nome }}</span>
-                <span class="user-badge">{{ 'Admin' if is_master else ('Intermediário' if tipo == 'intermediario' else 'Gestor') }}</span>
+                <span class="user-badge">{{ 'Admin' if is_master else ('Planejador' if tipo == 'planejador' else ('Intermediário' if tipo == 'intermediario' else 'Gestor')) }}</span>
             </div>
             <a href="{{ url_for('logout') }}" class="logout-btn">Sair</a>
         </div>
@@ -291,6 +291,7 @@
 
         <div class="menu-grid">
 
+            {% if tipo != 'planejador' %}
             <a href="{{ url_for('visualizar') }}" class="menu-card">
                 <div class="icon-circle icon-blue">
                     <svg viewBox="0 0 24 24">
@@ -323,6 +324,7 @@
                 <span class="permission-text">Inclusão Restrita</span>
                 {% endif %}
             </a>
+            {% endif %}
 
             {% if tipo != 'simples' %}
             <a href="{{ url_for('headcount') }}" class="menu-card">
@@ -336,7 +338,7 @@
                 </div>
                 <h3>Headcount do Ano</h3>
                 <p>Acompanhar evolução do quadro.</p>
-                {% if is_master %}
+                {% if is_master or is_planejador %}
                 <span class="permission-text master">Visualização Total</span>
                 {% else %}
                 <span class="permission-text">Visualização Parcial</span>
@@ -360,7 +362,7 @@
             </a>
             {% endif %}
 
-            {% if tipo != 'simples' %}
+            {% if tipo not in ('simples', 'planejador') %}
             <a href="{{ url_for('graficos') }}" class="menu-card">
                 <div class="icon-circle icon-yellow" style="background: #fdf2f8;">
                     <svg viewBox="0 0 24 24" style="stroke: #db2777; fill: none; stroke-linecap: round; stroke-linejoin: round;">

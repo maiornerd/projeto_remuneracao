@@ -101,14 +101,14 @@ def atualizar_notificacao_master(conn, triggered_by_master=False):
 def index():
     if 'matricula' not in session:
         return redirect(url_for('login'))
-    return render_template('dashboard.html', nome=session.get('nome'), is_master=session.get('is_master', False), tipo=session.get('tipo', 'simples'))
+    return render_template('dashboard.html', nome=session.get('nome'), is_master=session.get('is_master', False), tipo=session.get('tipo', 'simples'), is_planejador=session.get('is_planejador', False))
 
 @app.route('/graficos')
 def graficos():
     if 'matricula' not in session:
         return redirect(url_for('login'))
-    # Simples não tem acesso a gráficos
-    if session.get('tipo', 'simples') == 'simples':
+    # Simples e Planejador não tem acesso a gráficos
+    if session.get('tipo', 'simples') in ('simples', 'planejador'):
         return redirect(url_for('index'))
         
     is_master = session.get('is_master', False)
@@ -165,12 +165,18 @@ def graficos():
 def tabela():
     if 'matricula' not in session:
         return redirect(url_for('login'))
+    # Planejador não tem acesso à tabela de indicações
+    if session.get('tipo', 'simples') == 'planejador':
+        return redirect(url_for('index'))
     return render_template('formulario.html', nome_gestor=session.get('nome'), is_master=session.get('is_master'))
 
 @app.route('/visualizar')
 def visualizar():
     if 'matricula' not in session:
         return redirect(url_for('login'))
+    # Planejador não tem acesso a visualizar indicações
+    if session.get('tipo', 'simples') == 'planejador':
+        return redirect(url_for('index'))
     
     conn = get_db_connection()
     if session.get('is_master'):
@@ -194,6 +200,9 @@ def headcount():
         return redirect(url_for('index'))
         
     is_master = session.get('is_master', False)
+    is_planejador = session.get('is_planejador', False)
+    # Planejador tem acesso total ao headcount (como Master)
+    acesso_total_hc = is_master or is_planejador
     matricula = session.get('matricula')
     
     conn = get_db_connection()
@@ -203,7 +212,7 @@ def headcount():
         if total == 0:
             raise sqlite3.OperationalError("Table is empty, forcing seed")
             
-        if is_master:
+        if acesso_total_hc:
             lista_hc = conn.execute('SELECT * FROM headcount').fetchall()
         else:
             lista_hc = conn.execute('SELECT * FROM headcount WHERE matricula_gestor = ?', (matricula,)).fetchall()
@@ -277,7 +286,7 @@ def headcount():
                 ))
             conn.commit()
             
-            if is_master:
+            if acesso_total_hc:
                 lista_hc = conn.execute('SELECT * FROM headcount').fetchall()
             else:
                 lista_hc = conn.execute('SELECT * FROM headcount WHERE matricula_gestor = ?', (matricula,)).fetchall()
@@ -289,11 +298,11 @@ def headcount():
     conn.close()
     
     hcs = [dict(ix) for ix in lista_hc]
-    return render_template('headcount.html', hcs=hcs, is_master=is_master, nome=session.get('nome'))
+    return render_template('headcount.html', hcs=hcs, is_master=acesso_total_hc, nome=session.get('nome'))
 
 @app.route('/api/salvar_headcount', methods=['POST'])
 def salvar_headcount():
-    if 'matricula' not in session or not session.get('is_master'):
+    if 'matricula' not in session or (not session.get('is_master') and not session.get('is_planejador')):
         return jsonify({'error': 'Não autorizado'}), 403
         
     payload = request.get_json()
@@ -320,6 +329,8 @@ def salvar_headcount():
 def relatorio():
     if 'matricula' not in session: return redirect(url_for('login'))
     if not session.get('is_master'): return redirect(url_for('index'))
+    # Planejador não tem acesso ao relatório
+    if session.get('tipo', 'simples') == 'planejador': return redirect(url_for('index'))
     
     conn = get_db_connection()
     raw_hcs = conn.execute('SELECT * FROM headcount').fetchall()
@@ -392,6 +403,7 @@ def login():
             session['tipo'] = tipo_usuario
             session['is_master'] = (tipo_usuario == 'master')
             session['is_intermediario'] = (tipo_usuario == 'intermediario')
+            session['is_planejador'] = (tipo_usuario == 'planejador')
             session['gestor_matricula'] = user['gestor_matricula'] if 'gestor_matricula' in user.keys() and user['gestor_matricula'] else ''
             # Verificar se precisa trocar a senha (primeiro login ou reset pelo admin)
             if user['senha_resetada'] if 'senha_resetada' in user.keys() else False:
@@ -651,7 +663,7 @@ def alterar_tipo_usuario():
     dados = request.get_json()
     matricula = dados.get('matricula')
     novo_tipo = dados.get('tipo')
-    if not matricula or novo_tipo not in ['master', 'intermediario', 'simples']:
+    if not matricula or novo_tipo not in ['master', 'intermediario', 'simples', 'planejador']:
         return jsonify({'error': 'Dados inv\u00e1lidos'}), 400
     conn = get_db_connection()
     conn.execute("UPDATE usuarios SET tipo = ? WHERE matricula = ?", (novo_tipo, matricula))

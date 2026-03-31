@@ -212,6 +212,12 @@
             border: 1px solid #38bdf8;
         }
 
+        .badge-planejador {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #4ade80;
+        }
+
         .actions {
             display: flex;
             gap: 6px;
@@ -416,6 +422,7 @@
                     <select id="novoTipo">
                         <option value="simples">Simples</option>
                         <option value="intermediario">Intermediário</option>
+                        <option value="planejador">Planejador</option>
                         <option value="master">Master</option>
                     </select>
                 </div>
@@ -477,7 +484,7 @@
                         <td>{{ u.senha }}</td>
                         <td>
                             <span
-                                class="badge {{ 'badge-master' if u.tipo == 'master' else ('badge-intermediario' if u.tipo == 'intermediario' else 'badge-simples') }}">
+                                class="badge {{ 'badge-master' if u.tipo == 'master' else ('badge-planejador' if u.tipo == 'planejador' else ('badge-intermediario' if u.tipo == 'intermediario' else 'badge-simples')) }}">
                                 {{ u.tipo | upper }}
                             </span>
                         </td>
@@ -488,6 +495,8 @@
                                     <option value="simples" {{ 'selected' if u.tipo=='simples' }}>Simples</option>
                                     <option value="intermediario" {{ 'selected' if u.tipo=='intermediario' }}>
                                         Intermediário</option>
+                                    <option value="planejador" {{ 'selected' if u.tipo=='planejador' }}>
+                                        Planejador</option>
                                     <option value="master" {{ 'selected' if u.tipo=='master' }}>Master</option>
                                 </select>
                                 <button class="btn btn-sm" style="background: #8b5cf6; color: white;"
