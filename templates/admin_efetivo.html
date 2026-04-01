@@ -1,0 +1,283 @@
+{% extends "dashboard.html" %}
+
+{% block content %}
+<div class="container-fluid pf-efetivo-container" style="padding: 10px 20px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="text-primary fw-bold mb-0">Base de Efetivos (Visual de Planilha)</h4>
+            <p class="text-muted small mb-0">Visualização completa de colunas sincronizadas do arquivo EFETIVO.xlsx.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="btnSync" class="btn btn-success btn-sm" onclick="sincronizarEfetivo()">
+                <i class="fas fa-sync-alt me-1"></i>Sincronizar Planilha
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="limparFiltros()">Limpar Filtros</button>
+        </div>
+    </div>
+
+    <!-- Filtros Compactos -->
+    <div class="filters-bar card border-0 shadow-sm mb-3">
+        <div class="card-body p-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold extra-small text-uppercase mb-1">Pesquisar</label>
+                    <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Nome ou Matrícula..." onkeyup="carregarEfetivo()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold extra-small text-uppercase mb-1">Seção / Setor</label>
+                    <select id="filterSecao" class="form-select form-select-sm" onchange="carregarEfetivo()">
+                        <option value="">TODOS</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold extra-small text-uppercase mb-1">Gestor</label>
+                    <select id="filterGestor" class="form-select form-select-sm" onchange="carregarEfetivo()">
+                        <option value="">TODOS</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela Estilo Planilha -->
+    <div class="table-card card border-0 shadow-sm overflow-hidden">
+        <div class="table-wrapper" id="tableWrapper">
+            <table class="table table-bordered table-sm spreadsheet-table mb-0" id="tableEfetivo">
+                <thead id="theadEfetivo">
+                    <!-- Gerado dinamicamente -->
+                </thead>
+                <tbody id="tbodyEfetivo">
+                    <!-- Gerado dinamicamente -->
+                </tbody>
+            </table>
+            
+            <div id="noData" class="text-center p-5 d-none">
+                <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                <p class="text-muted mb-0">Nenhum registro encontrado.</p>
+            </div>
+            
+            <div id="loading" class="text-center p-5">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <p class="text-muted small mt-2">Carregando dados...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalhes (Opcional, mantido para conveniência) -->
+<div class="modal fade" id="modalDetalhes" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-primary text-white p-2 px-3">
+                <h6 class="modal-title fw-bold">Detalhes do Registro</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3" id="detalhesContent"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .extra-small { font-size: 0.65rem; }
+    .pf-efetivo-container {
+        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    }
+    .table-wrapper {
+        max-height: calc(100vh - 220px);
+        overflow: auto;
+        background: #fff;
+    }
+    .spreadsheet-table {
+        font-size: 11px;
+        border-collapse: collapse;
+        white-space: nowrap;
+    }
+    .spreadsheet-table thead th {
+        background-color: #5b9bd5; /* Cor estilo Excel/Headcount */
+        color: white;
+        font-weight: 600;
+        text-align: center;
+        padding: 6px 10px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border: 1px solid #4a86c0;
+    }
+    .spreadsheet-table td {
+        border: 1px solid #dee2e6;
+        padding: 4px 8px;
+        vertical-align: middle;
+    }
+    .spreadsheet-table tbody tr:hover {
+        background-color: #f0f7ff;
+    }
+    .spreadsheet-table .sticky-col {
+        position: sticky;
+        left: 0;
+        background: #f8f9fa;
+        z-index: 5;
+        font-weight: 600;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    }
+    
+    /* Dark Mode Compatibility */
+    body.dark-mode .table-wrapper { background: #1e1e1e; }
+    body.dark-mode .spreadsheet-table thead th { background-color: #2c4a6b; border-color: #1a2a3a; }
+    body.dark-mode .spreadsheet-table td { border-color: #333; color: #ccc; }
+    body.dark-mode .spreadsheet-table tbody tr:hover { background-color: #2d2d2d; }
+    body.dark-mode .spreadsheet-table .sticky-col { background: #252525; color: #fff; }
+</style>
+
+<script>
+    let rawData = [];
+    let tableHeaders = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+        carregarEfetivo();
+    });
+
+    function carregarEfetivo() {
+        const loading = document.getElementById('loading');
+        const noData = document.getElementById('noData');
+        const tbody = document.getElementById('tbodyEfetivo');
+        
+        loading.classList.remove('d-none');
+        noData.classList.add('d-none');
+        tbody.innerHTML = '';
+        
+        const search = document.getElementById('filterSearch').value;
+        const secao = document.getElementById('filterSecao').value;
+        const gestor = document.getElementById('filterGestor').value;
+        
+        fetch(`/api/admin/efetivo?search=${search}&secao=${secao}&gestor=${gestor}`)
+            .then(r => r.json())
+            .then(res => {
+                loading.classList.add('d-none');
+                if (res.success) {
+                    rawData = res.data;
+                    renderTable(res.data);
+                    atualizarSelects(res.filters);
+                }
+            })
+            .catch(err => {
+                loading.classList.add('d-none');
+                console.error(err);
+            });
+    }
+
+    function renderTable(data) {
+        const thead = document.getElementById('theadEfetivo');
+        const tbody = document.getElementById('tbodyEfetivo');
+        const noData = document.getElementById('noData');
+        
+        if (data.length === 0) {
+            thead.innerHTML = '';
+            noData.classList.remove('d-none');
+            return;
+        }
+        
+        // Determinar colunas dinamicamente a partir do primeiro registro
+        // Filtramos chaves internas como extra_json e id
+        const blackList = ['id', 'extra_json'];
+        const firstRecord = data[0];
+        tableHeaders = Object.keys(firstRecord).filter(k => !blackList.includes(k));
+        
+        // Criar Header
+        thead.innerHTML = `<tr>${tableHeaders.map((h, i) => `
+            <th class="${i === 0 ? 'ps-3 sticky-col' : ''}">${formatHeader(h)}</th>
+        `).join('')}</tr>`;
+
+        // Criar Linhas
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = tableHeaders.map((h, i) => `
+                <td class="${i === 0 ? 'ps-3 sticky-col' : ''}">${row[h] !== null && row[h] !== undefined ? row[h] : '-'}</td>
+            `).join('');
+            
+            tr.ondblclick = () => verDetalhes(row.matricula || row[tableHeaders[0]]);
+            tbody.appendChild(tr);
+        });
+    }
+
+    function formatHeader(key) {
+        // Formata as chaves internas para nomes amigáveis (opcional)
+        const labels = {
+            'matricula': 'Matrícula',
+            'nome': 'Nome do Colaborador',
+            'cargo': 'Cargo / Função',
+            'secao_nome': 'Seção / Departamento',
+            'gestor_nome': 'Gestor',
+            'data_admissao': 'Admissão',
+            'situacao': 'Status',
+            'macro_area': 'Macro Área',
+            'area_divisao': 'Área/Divisão',
+            'coligada_nome': 'Empresa'
+        };
+        return labels[key] || key.replace(/_/g, ' ').toUpperCase();
+    }
+
+    function atualizarSelects(filters) {
+        const selSecao = document.getElementById('filterSecao');
+        const selGestor = document.getElementById('filterGestor');
+        
+        if (selSecao.options.length <= 1) {
+            filters.secoes.forEach(s => selSecao.add(new Option(s, s)));
+        }
+        if (selGestor.options.length <= 1) {
+            filters.gestores.forEach(g => selGestor.add(new Option(g, g)));
+        }
+    }
+
+    function verDetalhes(mat) {
+        const user = rawData.find(u => (u.matricula === mat || u[tableHeaders[0]] === mat));
+        if (!user) return;
+        
+        let html = '<div class="row g-2">';
+        for (let [k, v] of Object.entries(user)) {
+            if (k !== 'extra_json' && k !== 'id') {
+                html += `
+                    <div class="col-md-6 border-bottom py-1">
+                        <label class="text-muted extra-small text-uppercase d-block">${k}</label>
+                        <span class="fw-bold small">${v || '-'}</span>
+                    </div>
+                `;
+            }
+        }
+        html += '</div>';
+        document.getElementById('detalhesContent').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('modalDetalhes')).show();
+    }
+
+    function sincronizarEfetivo() {
+        const btn = document.getElementById('btnSync');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processando...';
+        
+        fetch('/api/admin/importar_efetivo', { method: 'POST' })
+            .then(r => r.json())
+            .then(res => {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                if (res.success) {
+                    alert(res.message);
+                    carregarEfetivo();
+                } else {
+                    alert('Erro: ' + res.error);
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                alert('Erro de conexão ao processar planilha.');
+            });
+    }
+
+    function limparFiltros() {
+        document.getElementById('filterSearch').value = '';
+        document.getElementById('filterSecao').value = '';
+        document.getElementById('filterGestor').value = '';
+        carregarEfetivo();
+    }
+</script>
+{% endblock %}

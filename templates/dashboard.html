@@ -109,47 +109,61 @@
             font-size: 16px;
         }
 
+        .section-title {
+            font-size: 2.25rem;
+            font-weight: 400;
+            color: #1a2a3a;
+            border-bottom: none;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.125rem;
+            color: #4b5563;
+        }
+
         .menu-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .menu-card {
             background: #ffffff;
-            border-radius: 16px;
-            padding: 24px;
+            border-radius: 8px;
+            padding: 3rem 2rem;
             text-align: center;
             text-decoration: none;
-            color: #1f2937;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
-            transition: all 0.25s ease;
+            color: #1a2a3a;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e5e7eb;
         }
 
         .menu-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            border-color: #004dc7;
+            /* Azul gov.br mais escuro */
         }
 
-        .menu-card::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-            opacity: 0;
-            transition: 0.4s;
-        }
-
-        .menu-card:hover::before {
-            opacity: 1;
+        .menu-card:hover .icon-circle {
+            transform: scale(1.1);
         }
 
         .icon-circle {
-            width: 70px;
-            height: 70px;
-            margin: 0 auto 16px;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 24px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -159,9 +173,9 @@
 
         /* SVG */
         .icon-circle svg {
-            width: 32px;
-            height: 32px;
-            stroke-width: 2;
+            width: 48px;
+            height: 48px;
+            stroke-width: 1.5;
             transition: 0.3s;
         }
 
@@ -209,14 +223,18 @@
 
         /* Textos */
         .menu-card h3 {
-            font-size: 18px;
-            margin-bottom: 8px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1a2a3a;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            line-height: 1.2;
         }
 
+        /* Retirar subtítulo dos cards por enquanto conforme imagem que prioriza título limpo */
         .menu-card p {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 12px;
+            display: none;
         }
 
         /* Permissão */
@@ -272,22 +290,27 @@
     <nav class="navbar">
         <h1>Avaliações e Indicações</h1>
         <div class="nav-right">
-            <button class="theme-toggle-btn logout-btn" onclick="toggleDarkMode()" style="margin-right: 15px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg> Modo Escuro</button>
+            <button class="theme-toggle-btn logout-btn" onclick="toggleDarkMode()"
+                style="margin-right: 15px; background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><svg
+                    class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
+                </svg> Modo Escuro</button>
             <div class="user-info">
                 <span class="user-name">Bem-vindo, {{ nome }}</span>
-                <span class="user-badge">{{ 'Admin' if is_master else ('Planejador' if tipo == 'planejador' else ('Intermediário' if tipo == 'intermediario' else 'Gestor')) }}</span>
+                <span class="user-badge">{{ 'Admin' if is_master else ('Planejador' if tipo == 'planejador' else
+                    ('Intermediário' if tipo == 'intermediario' else 'Gestor')) }}</span>
             </div>
             <a href="{{ url_for('logout') }}" class="logout-btn">Sair</a>
         </div>
     </nav>
 
     <div class="container">
+        {% block content %}
         <div class="welcome-section">
-            <h2>Visualização e Gestão de Indicações</h2>
-            <p>Selecione a área que deseja gerenciar hoje.</p>
+            <h1 class="section-title">Navegue por Categoria</h1>
+            <p class="section-subtitle">Selecione o serviço ou a atividade desejada pelas opções abaixo</p>
         </div>
-
-
 
         <div class="menu-grid">
 
@@ -365,7 +388,8 @@
             {% if tipo not in ('simples', 'planejador') %}
             <a href="{{ url_for('graficos') }}" class="menu-card">
                 <div class="icon-circle icon-yellow" style="background: #fdf2f8;">
-                    <svg viewBox="0 0 24 24" style="stroke: #db2777; fill: none; stroke-linecap: round; stroke-linejoin: round;">
+                    <svg viewBox="0 0 24 24"
+                        style="stroke: #db2777; fill: none; stroke-linecap: round; stroke-linejoin: round;">
                         <path d="M3 3v18h18" />
                         <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
                     </svg>
@@ -376,14 +400,33 @@
             </a>
             {% endif %}
 
+            {% if tipo not in ('simples', 'planejador') %}
+            <a href="{{ url_for('movimentacoes') }}" class="menu-card">
+                <div class="icon-circle" style="background: #eff6ff;">
+                    <svg viewBox="0 0 24 24"
+                        style="stroke: #2563eb; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="8.5" cy="7" r="4" />
+                        <polyline points="17 11 19 13 23 9" />
+                    </svg>
+                </div>
+                <h3>Movimentações de Pessoal</h3>
+                <p>Entradas e saídas aprovadas nos seus setores.</p>
+                <span class="permission-text">Gestor e Master</span>
+            </a>
+            {% endif %}
+
+
+
             {% if is_master %}
             <a href="{{ url_for('admin_usuarios') }}" class="menu-card">
                 <div class="icon-circle" style="background: #f0fdf4;">
-                    <svg viewBox="0 0 24 24" style="stroke: #16a34a; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="8.5" cy="7" r="4"/>
-                        <line x1="20" y1="8" x2="20" y2="14"/>
-                        <line x1="23" y1="11" x2="17" y2="11"/>
+                    <svg viewBox="0 0 24 24"
+                        style="stroke: #16a34a; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="8.5" cy="7" r="4" />
+                        <line x1="20" y1="8" x2="20" y2="14" />
+                        <line x1="23" y1="11" x2="17" y2="11" />
                     </svg>
                 </div>
                 <h3>Gestão de Usuários</h3>
@@ -391,6 +434,10 @@
                 <span class="permission-text master">Master Exclusivo</span>
             </a>
             {% endif %}
+
+        </div>
+        {% endblock %}
+    </div>
 
         </div>
     </div>
@@ -410,6 +457,8 @@
                 color: #e0e0e0 !important; border-color: #333 !important;
             }
             body.dark-mode .menu-card h3 { color: #e0e0e0 !important; }
+            body.dark-mode .section-title { color: #ffffff !important; }
+            body.dark-mode .section-subtitle { color: #aaaaaa !important; }
             body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
                 background-color: #2d2d2d !important; color: #ffffff !important; border: 1px solid #444 !important;
             }
@@ -425,6 +474,8 @@
             }
             body.dark-mode .btn-outline { border-color: #aaa !important; color: #aaa !important; }
             body.dark-mode .btn-outline:hover { background-color: #aaa !important; color: #121212 !important; }
+            body.dark-mode .permission-text { background-color: #2d2d2d !important; color: #e0e0e0 !important; border: 1px solid #444 !important; }
+            body.dark-mode .permission-text.master { background-color: #422006 !important; color: #fef3c7 !important; border-color: #92400e !important; }
             /* Modal / Inputs inside Modal */
             body.dark-mode .modal { background: rgba(0,0,0,0.8) !important; }
             body.dark-mode .modal-body { color: #ccc !important; }

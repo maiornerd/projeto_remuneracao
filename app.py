@@ -9,71 +9,59 @@ MASTERS_INICIAIS = ['1-082959', '1-082361', '1-079254']
 def get_db_connection():
     import os
     db_path = os.path.join(os.path.dirname(__file__), 'app.db')
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=20) # Aumentar timeout para evitar locks
     conn.row_factory = sqlite3.Row
-    
+    return conn
+
+def init_db_schema():
+    conn = get_db_connection()
+    # Tabelas base
     conn.execute('''
         CREATE TABLE IF NOT EXISTS indicacoes_item (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            gestor_origem_mat TEXT,
-            nome_gestor_origem TEXT,
-            gestor_destino_mat TEXT,
-            nome_gestor_destino TEXT,
-            matricula_empregado TEXT,
-            nome_empregado TEXT,
-            setor_destino TEXT,
-            cargo_atual TEXT,
-            cargo_proposto TEXT,
-            mes_ano TEXT,
-            observacao TEXT DEFAULT '',
-            status TEXT DEFAULT 'Em análise',
-            dados_completos TEXT,
-            data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
+            gestor_origem_mat TEXT, nome_gestor_origem TEXT, gestor_destino_mat TEXT, nome_gestor_destino TEXT,
+            matricula_empregado TEXT, nome_empregado TEXT, setor_destino TEXT, cargo_atual TEXT, cargo_proposto TEXT,
+            mes_ano TEXT, observacao TEXT DEFAULT '', status TEXT DEFAULT 'Em análise', setor_origem TEXT,
+            dados_completos TEXT, data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
     conn.execute('''
         CREATE TABLE IF NOT EXISTS notificacoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            matricula TEXT,
-            mensagem TEXT,
-            lida BOOLEAN DEFAULT 0,
+            id INTEGER PRIMARY KEY AUTOINCREMENT, matricula TEXT, mensagem TEXT, lida BOOLEAN DEFAULT 0,
             data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     conn.execute('''
         CREATE TABLE IF NOT EXISTS auditoria (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            indicacao_id INTEGER,
-            matricula TEXT,
-            nome TEXT,
-            acao TEXT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT, indicacao_id INTEGER, matricula TEXT, nome TEXT, acao TEXT,
             data_hora DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    # Adicionar coluna tipo se não existir
-    try:
-        conn.execute("ALTER TABLE usuarios ADD COLUMN tipo TEXT DEFAULT 'simples'")
-        for m in MASTERS_INICIAIS:
-            conn.execute("UPDATE usuarios SET tipo = 'master' WHERE matricula = ?", (m,))
-    except:
-        pass
-    # Migrar valores antigos: garantir que tipo nunca é NULL
-    conn.execute("UPDATE usuarios SET tipo = 'simples' WHERE tipo IS NULL OR tipo = ''")
-    # Adicionar coluna senha_resetada se não existir
-    try:
-        conn.execute("ALTER TABLE usuarios ADD COLUMN senha_resetada INTEGER DEFAULT 1")
-        # Existentes NÃO devem ser forçados a trocar - somente novos ou quando admin resetar
-        conn.execute("UPDATE usuarios SET senha_resetada = 0")
-    except:
-        pass
-    # Adicionar coluna gestor_matricula se não existir
-    try:
-        conn.execute("ALTER TABLE usuarios ADD COLUMN gestor_matricula TEXT DEFAULT ''")
-    except:
-        pass
-    conn.commit()
     
-    return conn
+    # Migrações e Colunas Extras
+    try: conn.execute('ALTER TABLE indicacoes_item ADD COLUMN setor_origem TEXT'); 
+    except: pass
+    try: conn.execute("ALTER TABLE usuarios ADD COLUMN tipo TEXT DEFAULT 'simples'"); 
+    except: pass
+    try: conn.execute("ALTER TABLE usuarios ADD COLUMN senha_resetada INTEGER DEFAULT 1"); 
+    except: pass
+    try: conn.execute("ALTER TABLE usuarios ADD COLUMN gestor_matricula TEXT DEFAULT ''"); 
+    except: pass
+    try: conn.execute("ALTER TABLE usuarios ADD COLUMN email TEXT DEFAULT ''"); 
+    except: pass
+    
+    # Garantir Masters e Tipos
+    conn.execute("UPDATE usuarios SET tipo = 'simples' WHERE tipo IS NULL OR tipo = ''")
+    for m in MASTERS_INICIAIS:
+        conn.execute("UPDATE usuarios SET tipo = 'master' WHERE matricula = ?", (m,))
+    
+    conn.commit()
+    conn.close()
+
+# Inicializar banco na carga do app
+with app.app_context():
+    init_db_schema()
 
 def atualizar_notificacao_master(conn, triggered_by_master=False):
     pendentes_row = conn.execute("SELECT COUNT(*) as qtd FROM indicacoes_item WHERE TRIM(status) = 'Em análise'").fetchone()
@@ -94,8 +82,52 @@ def atualizar_notificacao_master(conn, triggered_by_master=False):
                 lida = 1 if triggered_by_master else 0
                 conn.execute("INSERT INTO notificacoes (matricula, mensagem, lida) VALUES (?, ?, ?)", (m, msg, lida))
         else:
-            if existe:
                 conn.execute("DELETE FROM notificacoes WHERE id = ?", (existe['id'],))
+
+# SMTP Configuration (Configure with real credentials for production)
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+SMTP_SERVER = "smtp.gmail.com" # Ex: smtp.gmail.com
+SMTP_PORT = 585
+SMTP_USER = ""  # Seu e-mail
+SMTP_PASS = ""  # Sua senha de app
+
+def enviar_email_reset(destinatario, nome_usuario, nova_senha):
+    if not SMTP_USER or not SMTP_PASS:
+        print(f"SMTP não configurado. Simulação: E-mail de reset enviado para {destinatario} com senha {nova_senha}")
+        return True
+        
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = destinatario
+        msg['Subject'] = "Redefinição de Senha - Sistema de Indicações DeMillus"
+        
+        corpo = f"""
+        Olá {nome_usuario},
+        
+        Sua senha de acesso ao Sistema de Indicações foi redefinida pelo administrador.
+        
+        Sua nova senha temporária é: {nova_senha}
+        
+        Por favor, realize o login com esta senha. O sistema solicitará que você crie uma nova senha pessoal no seu primeiro acesso.
+        
+        Atenciosamente,
+        Administração DeMillus
+        """
+        msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
+        
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Erro ao enviar e-mail: {str(e)}")
+        return False
 
 @app.route('/')
 def index():
@@ -158,7 +190,81 @@ def graficos():
                          nome=session.get('nome'),
                          is_master=is_master,
                          status_counts=json.dumps(status_dict),
-                         headcount_data=json.dumps(headcount_data) if headcount_data else "null")
+                         headcount_data=json.dumps(headcount_data) if headcount_data else "null",
+                         is_planejador=session.get('is_planejador'))
+
+
+@app.route('/movimentacoes')
+def movimentacoes():
+    if 'matricula' not in session:
+        return redirect(url_for('login'))
+    
+    # Planejador e Simples não têm acesso a movimentações
+    if session.get('is_planejador') or session.get('tipo') == 'simples':
+        return redirect(url_for('index'))
+
+    is_master = session.get('is_master')
+    matricula = session['matricula']
+    
+    conn = get_db_connection()
+    
+    # 1. Identificar setores sob gestão
+    if is_master:
+        setores_gestao = [r['nome_setor'] for r in conn.execute('SELECT DISTINCT nome_setor FROM opcoes_gestor').fetchall()]
+    else:
+        setores_gestao = [r['nome_setor'] for r in conn.execute('SELECT DISTINCT nome_setor FROM opcoes_gestor WHERE matricula = ?', (matricula,)).fetchall()]
+
+    if not setores_gestao:
+        conn.close()
+        return render_template('movimentacoes.html', 
+                             nome=session.get('nome'), 
+                             is_master=is_master,
+                             data=json.dumps({}),
+                             resumo={'entradas': 0, 'saidas': 0, 'saldo': 0})
+
+    # 2. Buscar movimentações aprovadas envolvendo esses setores
+    placeholders = ','.join(['?'] * len(setores_gestao))
+    query = f'''
+        SELECT * FROM indicacoes_item 
+        WHERE status = 'Aprovado' 
+        AND (setor_origem IN ({placeholders}) OR setor_destino IN ({placeholders}))
+    '''
+    rows = conn.execute(query, setores_gestao + setores_gestao).fetchall()
+    conn.close()
+
+    # 3. Processar dados para o dashboard
+    stats = {} # { setor: { entradas: X, saidas: Y } }
+    total_entradas = 0
+    total_saidas = 0
+    detalhes = []
+
+    for r in rows:
+        row_dict = dict(r)
+        s_orig = row_dict['setor_origem']
+        s_dest = row_dict['setor_destino']
+        
+        # Contabilizar Saída
+        if s_orig in setores_gestao:
+            stats.setdefault(s_orig, {'entradas': 0, 'saidas': 0})['saidas'] += 1
+            total_saidas += 1
+            
+        # Contabilizar Entrada
+        if s_dest in setores_gestao:
+            stats.setdefault(s_dest, {'entradas': 0, 'saidas': 0})['entradas'] += 1
+            total_entradas += 1
+        
+        detalhes.append(row_dict)
+
+    return render_template('movimentacoes.html',
+                         nome=session.get('nome'),
+                         is_master=is_master,
+                         data=json.dumps(stats),
+                         resumo={
+                             'entradas': total_entradas,
+                             'saidas': total_saidas,
+                             'saldo': total_entradas - total_saidas
+                         },
+                         detalhes=detalhes)
 
 
 @app.route('/tabela')
@@ -518,12 +624,12 @@ def salvar_indicacoes():
         cursor = conn.execute('''
             INSERT INTO indicacoes_item 
             (gestor_origem_mat, nome_gestor_origem, gestor_destino_mat, nome_gestor_destino,
-            matricula_empregado, nome_empregado, setor_destino, cargo_atual, cargo_proposto,
+            matricula_empregado, nome_empregado, setor_origem, setor_destino, cargo_atual, cargo_proposto,
             mes_ano, status, observacao, dados_completos)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Em análise', '', ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Em análise', '', ?)
         ''', (
             matricula_origem, nome_origem, gestor_destino_mat, nome_gestor_dest,
-            matr_emp, nome_emp, setor_dest, cargo_atual, cargo_prop, mes_ano_str,
+            matr_emp, nome_emp, row.get('setorOrigem', ''), setor_dest, cargo_atual, cargo_prop, mes_ano_str,
             json.dumps(row, ensure_ascii=False)
         ))
         novo_id = cursor.lastrowid
@@ -639,7 +745,7 @@ def admin_usuarios():
     if 'matricula' not in session or not session.get('is_master'):
         return redirect(url_for('index'))
     conn = get_db_connection()
-    usuarios = conn.execute("SELECT u.matricula, u.nome, u.senha, COALESCE(u.tipo, 'simples') as tipo, COALESCE(u.gestor_matricula, '') as gestor_matricula, COALESCE(g.nome, '') as gestor_nome FROM usuarios u LEFT JOIN usuarios g ON u.gestor_matricula = g.matricula ORDER BY u.nome").fetchall()
+    usuarios = conn.execute("SELECT u.matricula, u.nome, u.email, u.senha, COALESCE(u.tipo, 'simples') as tipo, COALESCE(u.gestor_matricula, '') as gestor_matricula, COALESCE(g.nome, '') as gestor_nome FROM usuarios u LEFT JOIN usuarios g ON u.gestor_matricula = g.matricula ORDER BY u.nome").fetchall()
     # Lista de gestores distintos da tabela opcoes_gestor
     gestores = conn.execute("SELECT DISTINCT og.matricula, u.nome FROM opcoes_gestor og LEFT JOIN usuarios u ON og.matricula = u.matricula ORDER BY u.nome").fetchall()
     conn.close()
@@ -652,17 +758,18 @@ def criar_usuario():
     dados = request.get_json()
     matricula = dados.get('matricula', '').strip()
     nome = dados.get('nome', '').strip()
+    email = dados.get('email', '').strip()
     senha = dados.get('senha', '').strip()
     tipo = dados.get('tipo', 'simples')
     gestor_matricula = dados.get('gestor_matricula', '').strip()
     if not matricula or not nome or not senha:
-        return jsonify({'error': 'Preencha todos os campos obrigat\u00f3rios.'}), 400
+        return jsonify({'error': 'Preencha todos os campos obrigatórios.'}), 400
     conn = get_db_connection()
     existe = conn.execute("SELECT matricula FROM usuarios WHERE matricula = ?", (matricula,)).fetchone()
     if existe:
         conn.close()
-        return jsonify({'error': 'Matr\u00edcula j\u00e1 cadastrada no sistema.'}), 400
-    conn.execute("INSERT INTO usuarios (matricula, nome, senha, tipo, gestor_matricula) VALUES (?, ?, ?, ?, ?)", (matricula, nome, senha, tipo, gestor_matricula))
+        return jsonify({'error': 'Matrícula já cadastrada no sistema.'}), 400
+    conn.execute("INSERT INTO usuarios (matricula, nome, email, senha, tipo, gestor_matricula) VALUES (?, ?, ?, ?, ?, ?)", (matricula, nome, email, senha, tipo, gestor_matricula))
     conn.commit()
     conn.close()
     return jsonify({'success': True, 'message': f'Usu\u00e1rio {nome} criado com sucesso!'})
@@ -702,14 +809,41 @@ def resetar_senha():
         return jsonify({'error': 'Não autorizado'}), 403
     dados = request.get_json()
     matricula = dados.get('matricula')
+    
+    # Se não enviou senha, gerar uma aleatória de 6 caracteres
+    import string, random
     nova_senha = dados.get('nova_senha', '').strip()
-    if not matricula or not nova_senha:
+    if not nova_senha:
+        nova_senha = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+
+    if not matricula:
         return jsonify({'error': 'Dados inválidos'}), 400
+        
     conn = get_db_connection()
+    user = conn.execute("SELECT nome, email FROM usuarios WHERE matricula = ?", (matricula,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({'error': 'Usuário não encontrado'}), 404
+        
     conn.execute("UPDATE usuarios SET senha = ?, senha_resetada = 1 WHERE matricula = ?", (nova_senha, matricula))
     conn.commit()
     conn.close()
-    return jsonify({'success': True, 'message': f'Senha resetada! O usuário precisará alterar no próximo login.'})
+    
+    # Enviar e-mail se houver e-mail cadastrado
+    info_email = ""
+    if user['email']:
+        enviado = enviar_email_reset(user['email'], user['nome'], nova_senha)
+        info_email = " e e-mail de notificação enviado" if enviado else " (erro ao enviar e-mail)"
+    
+    return jsonify({
+        'success': True, 
+        'message': f'Senha resetada para "{nova_senha}"{info_email}!',
+        'nova_senha': nova_senha,
+        'email': user['email'],
+        'nome': user['nome'],
+        'matricula': matricula
+    })
+
 
 @app.route('/api/admin/alterar_gestor', methods=['POST'])
 def alterar_gestor_usuario():
@@ -726,5 +860,24 @@ def alterar_gestor_usuario():
     conn.close()
     return jsonify({'success': True, 'message': 'Gestor do usuário atualizado com sucesso!'})
 
+@app.route('/api/admin/alterar_email', methods=['POST'])
+def alterar_email_usuario():
+    if 'matricula' not in session or not session.get('is_master'):
+        return jsonify({'error': 'Não autorizado'}), 403
+    dados = request.get_json()
+    matricula = dados.get('matricula')
+    novo_email = dados.get('email', '').strip()
+    if not matricula:
+        return jsonify({'error': 'Dados inválidos'}), 400
+    conn = get_db_connection()
+    conn.execute("UPDATE usuarios SET email = ? WHERE matricula = ?", (novo_email, matricula))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'E-mail do usuário atualizado com sucesso!'})
+
+
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, port=port)

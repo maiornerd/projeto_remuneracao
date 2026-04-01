@@ -144,6 +144,19 @@
             from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        .section-title {
+            font-size: 2.25rem;
+            font-weight: 400;
+            color: #1a2a3a;
+            border-bottom: none;
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.125rem;
+            color: #4b5563;
+        }
     </style>
 </head>
 
@@ -163,8 +176,8 @@
 
     <div class="container">
         <div class="welcome-section">
-            <h2>Painel de Analíticos & Gráficos</h2>
-            <p>Métricas globais e consumo das vagas aprovadas.</p>
+            <h1 class="section-title">Painel de Analíticos & Gráficos</h1>
+            <p class="section-subtitle">Métricas globais e consumo das vagas aprovadas.</p>
         </div>
 
         <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 40px;">
@@ -195,6 +208,8 @@
                 color: #e0e0e0 !important; border-color: #333 !important;
             }
             body.dark-mode .menu-card h3 { color: #e0e0e0 !important; }
+            body.dark-mode .section-title { color: #ffffff !important; }
+            body.dark-mode .section-subtitle { color: #aaaaaa !important; }
             body.dark-mode .logout-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--white); }
         `;
         const styleSheet = document.createElement("style");

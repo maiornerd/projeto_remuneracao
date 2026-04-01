@@ -102,7 +102,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1400px;
             margin: 30px auto;
             padding: 0 20px;
             flex: 1;
@@ -135,7 +135,7 @@
         /* Formulário Criar Usuário */
         .form-row {
             display: grid;
-            grid-template-columns: 1fr 2fr 1fr 1fr 1.5fr auto;
+            grid-template-columns: 1fr 1.5fr 1.5fr 1fr 1fr 1.5fr auto;
             gap: 12px;
             align-items: end;
         }
@@ -159,10 +159,16 @@
         }
 
         /* Tabela */
+        .table-responsive {
+            overflow-x: auto;
+            width: 100%;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 16px;
+            min-width: 1000px; /* Garante que a tabela não comprima demais os dados */
         }
 
         th {
@@ -414,6 +420,10 @@
                     <input type="text" id="novoNome" placeholder="Ex: João da Silva">
                 </div>
                 <div class="form-group">
+                    <label>E-mail</label>
+                    <input type="email" id="novoEmail" placeholder="usuario@demillus.com.br">
+                </div>
+                <div class="form-group">
                     <label>Senha</label>
                     <input type="text" id="novaSenha" placeholder="Senha inicial">
                 </div>
@@ -456,11 +466,13 @@
                 </svg>
                 Usuários Cadastrados ({{ usuarios|length }})
             </h2>
-            <table>
+            <div class="table-responsive">
+                <table>
                 <thead>
                     <tr>
                         <th>Matrícula</th>
                         <th>Nome</th>
+                        <th>E-mail</th>
                         <th>Gestor</th>
                         <th>Senha</th>
                         <th>Tipo</th>
@@ -473,6 +485,11 @@
                         <td>{{ u.matricula }}</td>
                         <td>{{ u.nome }}</td>
                         <td>
+                            <input type="email" value="{{ u.email }}" 
+                                onblur="alterarEmail('{{ u.matricula }}', this.value)"
+                                style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; width:100%; min-width:180px;">
+                        </td>
+                        <td>
                             <select onchange="alterarGestor('{{ u.matricula }}', this.value)"
                                 style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; cursor:pointer; max-width:180px;">
                                 <option value="" {{ 'selected' if not u.gestor_matricula }}>-- Nenhum --</option>
@@ -481,7 +498,7 @@
                                 {% endfor %}
                             </select>
                         </td>
-                        <td>{{ u.senha }}</td>
+                        <td title="{{ u.senha }}">********</td>
                         <td>
                             <span
                                 class="badge {{ 'badge-master' if u.tipo == 'master' else ('badge-planejador' if u.tipo == 'planejador' else ('badge-intermediario' if u.tipo == 'intermediario' else 'badge-simples')) }}">
@@ -525,6 +542,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 
@@ -580,6 +598,7 @@
         function criarUsuario() {
             const matricula = document.getElementById('novaMatricula').value.trim();
             const nome = document.getElementById('novoNome').value.trim();
+            const email = document.getElementById('novoEmail').value.trim();
             const senha = document.getElementById('novaSenha').value.trim();
             const tipo = document.getElementById('novoTipo').value;
             const gestor_matricula = document.getElementById('novoGestor').value;
@@ -590,7 +609,7 @@
             fetch('/api/admin/criar_usuario', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ matricula, nome, senha, tipo, gestor_matricula })
+                body: JSON.stringify({ matricula, nome, email, senha, tipo, gestor_matricula })
             }).then(r => r.json()).then(d => {
                 if (d.success) {
                     showToast(d.message, false);
@@ -606,6 +625,20 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ matricula, gestor_matricula: gestorMatricula })
+            }).then(r => r.json()).then(d => {
+                if (d.success) {
+                    showToast(d.message, false);
+                } else {
+                    showToast(d.error, true);
+                }
+            });
+        }
+
+        function alterarEmail(matricula, novoEmail) {
+            fetch('/api/admin/alterar_email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matricula, email: novoEmail })
             }).then(r => r.json()).then(d => {
                 if (d.success) {
                     showToast(d.message, false);
@@ -677,17 +710,32 @@
             btnOk.className = 'confirm-btn confirm-btn-warning';
             btnOk.textContent = 'Resetar Senha';
             btnOk.onclick = () => {
-                const nova = document.getElementById('inputNovaSenha').value.trim();
-                if (!nova) { showToast('Digite uma nova senha!', true); return; }
+                // Ao clicar para resetar, não pedimos mais a senha (gera automática no backend)
                 fecharConfirm();
                 fetch('/api/admin/resetar_senha', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ matricula, nova_senha: nova })
+                    body: JSON.stringify({ matricula })
                 }).then(r => r.json()).then(d => {
                     if (d.success) {
                         showToast(d.message, false);
-                        setTimeout(() => location.reload(), 1500);
+                        
+                        // --- MONTA E ABRE O CLIENTE DE E-MAIL VIA MAILTO ---
+                        const assunto = `🔑 Nova Senha Temporária - Acesso ao Sistema`;
+                        const corpo = 
+                            `Olá ${d.nome} (Matrícula: ${d.matricula}),\n\n` +
+                            `Sua senha de acesso ao sistema foi redefinida.\n\n` +
+                            `Sua nova senha temporária é: ${d.nova_senha}\n\n` +
+                            `Por favor, utilize esta senha em seu próximo login e altere-a imediatamente nas configurações de perfil por questões de segurança.\n\n` +
+                            `Atenciosamente,\nAdministração do Sistema`;
+
+                        const mailtoLink = `mailto:${d.email || ''}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+                        
+                        // Abre o cliente de e-mail padrão
+                        window.location.href = mailtoLink;
+
+                        // Recarrega a página após um tempo para atualizar o estado (opcional, mas bom se houver mudanças visuais)
+                        setTimeout(() => location.reload(), 3000);
                     } else {
                         showToast(d.error, true);
                     }

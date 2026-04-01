@@ -461,6 +461,61 @@
             text-align: center; color: #aaa; padding: 30px;
             font-style: italic;
         }
+        /* Custom Modal (Ported from formulario.html) */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000; /* Higher than other elements */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+            margin: auto;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        @keyframes modalSlideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        .modal-header h2 {
+            color: #3A6EA5;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+        .modal-body {
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
     </style>
 </head>
 
@@ -510,6 +565,8 @@
             <div style="display: flex; gap: 10px;">
 
                 {% if is_master and indicacoes|length > 0 %}
+
+
 
                 <button class="btn btn-danger" onclick="excluirSelecionados()">
 
@@ -565,6 +622,7 @@
                     <th>Mês/Ano Mov.</th>
                     <th>Motivos das Alterações</th>
                     <th>Status</th>
+
                     <th style="width: 80px; text-align: center;">Histórico</th>
                 </tr>
             </thead>
@@ -601,11 +659,12 @@
                             </option>
                         </select>
                     </td>
+
                     <!-- SIMPLES VIEW -->
                     {% else %}
                     <td style="text-align: center;">
                         {% if item.observacao and item.observacao.strip() != '' %}
-                        <div class="tooltip" onclick="abrirObservacao('{{ item.observacao | replace("'", "\\'") | replace('"', '&quot;') }}')">
+                        <div class="tooltip" onclick='abrirObservacao({{ item.observacao | tojson | safe }})'>
 
                             <!-- INFO TOOLTIP -->
                             <span class="tooltip-icon">
@@ -625,9 +684,10 @@
                     <td>
                         <span class="status-badge" data-status="{{ item.status }}">{{ item.status }}</span>
                     </td>
+
                     {% endif %}
                     <td style="text-align: center;">
-                        <button class="btn-historico" onclick="abrirHistorico({{ item.id }}, '{{ item.nome_empregado }}')" title="Ver Histórico">
+                        <button class="btn-historico" onclick='abrirHistorico({{ item.id }}, {{ item.nome_empregado | tojson | safe }})' title="Ver Histórico">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         </button>
                     </td>
@@ -679,6 +739,37 @@
     </div>
 
     <script>
+        // --- Globais e Utilidades ---
+        let pendingConfirmAction = null;
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let filteredRows = [];
+
+        function showCustomAlert(title, message) {
+            const modal = document.getElementById('customAlertModal');
+            document.getElementById('customAlertTitle').textContent = title;
+            document.getElementById('customAlertMessage').textContent = message;
+            modal.classList.add('show');
+        }
+
+        function closeCustomAlert() {
+            document.getElementById('customAlertModal').classList.remove('show');
+        }
+
+        function showCustomConfirm(title, message, callback) {
+            const modal = document.getElementById('customConfirmModal');
+            document.getElementById('customConfirmTitle').textContent = title;
+            document.getElementById('customConfirmMessage').textContent = message;
+            pendingConfirmAction = callback;
+            modal.classList.add('show');
+        }
+
+        function closeCustomConfirm() {
+            document.getElementById('customConfirmModal').classList.remove('show');
+            pendingConfirmAction = null;
+        }
+
+        // --- Modais de Histórico e Observação ---
         function abrirHistorico(id, nomeEmpregado) {
             document.getElementById('historicoSubtitle').textContent = 'Empregado: ' + nomeEmpregado;
             const timeline = document.getElementById('historicoTimeline');
@@ -689,12 +780,12 @@
                 .then(r => r.json())
                 .then(logs => {
                     if (logs.length === 0) {
-                        timeline.innerHTML = '<div class="timeline-empty">Nenhum registro de auditoria encontrado para esta indicação.</div>';
+                        timeline.innerHTML = '<div class="timeline-empty">Nenhum registro de auditoria encontrado.</div>';
                         return;
                     }
                     timeline.innerHTML = logs.map(log => {
                         const dt = new Date(log.data_hora);
-                        const dataStr = dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        const dataStr = dt.toLocaleDateString('pt-BR');
                         const horaStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                         return `
                             <div class="timeline-item">
@@ -709,24 +800,21 @@
                     timeline.innerHTML = '<div class="timeline-empty">Erro ao carregar histórico.</div>';
                 });
         }
+
         function fecharHistorico() {
             document.getElementById('modalHistorico').classList.remove('active');
         }
+
         function abrirObservacao(texto) {
             document.getElementById('obsConteudo').textContent = texto;
             document.getElementById('modalObservacao').classList.add('active');
         }
+
         function fecharObservacao() {
             document.getElementById('modalObservacao').classList.remove('active');
         }
-    </script>
 
-    <script>
-        // Variáveis de Paginação e Filtro
-        let currentPage = 1;
-        const rowsPerPage = 10;
-        let filteredRows = [];
-
+        // --- Filtros e Paginação ---
         function applyFiltersAndPagination() {
             const filterAtual = document.getElementById('filterGestorAtual').value.toLowerCase();
             const filterNovo = document.getElementById('filterGestorNovo').value.toLowerCase();
@@ -742,115 +830,60 @@
                 const matr = row.querySelector('.col-matricula').textContent.toLowerCase();
                 const mes = row.querySelector('.col-mes').textContent.toLowerCase();
 
-                if (atual.includes(filterAtual) &&
-                    novo.includes(filterNovo) &&
-                    matr.includes(filterMatr) &&
-                    mes.includes(filterMes)) {
+                if (atual.includes(filterAtual) && novo.includes(filterNovo) && 
+                    matr.includes(filterMatr) && mes.includes(filterMes)) {
                     filteredRows.push(row);
                 } else {
-                    row.style.display = 'none'; // Esconde os que não batem no filtro
+                    row.style.display = 'none';
                 }
             });
 
-            // Reseta a checkbox master
             const cbMaster = document.getElementById('selectAllCheckbox');
             if (cbMaster) cbMaster.checked = false;
-
-            // Reseta todas as row-checkbox ocultas
-            document.querySelectorAll('.row-checkbox').forEach(cb => {
-                if (cb.closest('tr').style.display === 'none') {
-                    cb.checked = false;
-                }
-            });
 
             currentPage = 1;
             renderPagination();
         }
 
         function renderPagination() {
+            const container = document.getElementById('paginationControls');
+            if (!container) return;
+            
             if (filteredRows.length === 0) {
-                document.getElementById('paginationControls').style.display = 'none';
+                container.style.display = 'none';
                 return;
             } else {
-                document.getElementById('paginationControls').style.display = 'flex';
+                container.style.display = 'flex';
             }
 
             const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
             document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages}`;
-
-            document.getElementById('btnPrev').disabled = currentPage === 1;
-            document.getElementById('btnPrev').style.opacity = currentPage === 1 ? '0.5' : '1';
-
-            document.getElementById('btnNext').disabled = currentPage === totalPages;
-            document.getElementById('btnNext').style.opacity = currentPage === totalPages ? '0.5' : '1';
+            document.getElementById('btnPrev').disabled = (currentPage === 1);
+            document.getElementById('btnNext').disabled = (currentPage === totalPages);
 
             const startIndex = (currentPage - 1) * rowsPerPage;
             const endIndex = startIndex + rowsPerPage;
 
             filteredRows.forEach((row, index) => {
-                if (index >= startIndex && index < endIndex) {
-                    row.style.display = 'table-row';
-                } else {
-                    row.style.display = 'none';
-                }
+                row.style.display = (index >= startIndex && index < endIndex) ? 'table-row' : 'none';
             });
         }
 
         function changePage(delta) {
-            const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
             currentPage += delta;
-            if (currentPage < 1) currentPage = 1;
-            if (currentPage > totalPages) currentPage = totalPages;
-
-            // Uncheck visual na mudança de página para não confundir? Pode ser opcional.
-            const cbMaster = document.getElementById('selectAllCheckbox');
-            if (cbMaster) cbMaster.checked = false;
-
             renderPagination();
         }
 
-        // Exclusão
         function toggleAll(source) {
             const checkboxes = document.querySelectorAll('.row-checkbox');
             checkboxes.forEach(cb => {
-                // Checa/descheca apenas os que estão visíveis na página atual
                 if (cb.closest('tr').style.display === 'table-row') {
                     cb.checked = source.checked;
                 }
             });
         }
 
-        function excluirSelecionados() {
-            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
-            const idsParaExcluir = Array.from(checkboxes).map(cb => cb.value);
-
-            if (idsParaExcluir.length === 0) {
-                alert('Selecione pelo menos uma indicação para excluir marcando as caixas à esquerda.');
-                return;
-            }
-
-            if (confirm(`Tem certeza que deseja EXCLUIR PERMANENTEMENTE as ${idsParaExcluir.length} indicações selecionadas?`)) {
-                fetch('/api/excluir_indicacoes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ids: idsParaExcluir })
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Indicações excluídas com sucesso!');
-                            window.location.reload();
-                        } else {
-                            alert('Erro ao excluir: ' + (data.error || 'Desconhecido'));
-                        }
-                    })
-                    .catch(err => {
-                        alert('Erro de conexão ao excluir: ' + err);
-                    });
-            }
-        }
-
-
+        // --- Ações Master ---
         function salvarAlteracoes() {
             const rows = document.querySelectorAll('#indicacoesTable tbody tr');
             const updates = [];
@@ -859,13 +892,8 @@
                 const id = row.getAttribute('data-id');
                 const obsEl = row.querySelector('.edit-obs');
                 const statusEl = row.querySelector('.edit-status');
-
                 if (obsEl && statusEl) {
-                    updates.push({
-                        id: id,
-                        observacao: obsEl.value,
-                        status: statusEl.value
-                    });
+                    updates.push({ id: id, observacao: obsEl.value, status: statusEl.value });
                 }
             });
 
@@ -876,58 +904,63 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ updates: updates })
             })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const toast = document.getElementById('toast');
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+                } else {
+                    showCustomAlert('❌ Erro', 'Erro ao salvar: ' + (data.error || 'Desconhecido'));
+                }
+            })
+            .catch(err => showCustomAlert('❌ Erro', 'Erro de rede: ' + err));
+        }
+
+        function excluirSelecionados() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            const idsParaExcluir = Array.from(checkboxes).map(cb => cb.value);
+
+            if (idsParaExcluir.length === 0) {
+                showCustomAlert('⚠️ ATENÇÃO', 'Selecione as indicações para excluir.');
+                return;
+            }
+
+            showCustomConfirm('⚠️ Confirmar Exclusão', `Excluir permanentemente ${idsParaExcluir.length} indicações?`, () => {
+                fetch('/api/excluir_indicacoes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: idsParaExcluir })
+                })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        const toast = document.getElementById('toast');
-                        toast.style.display = 'block';
-                        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+                        showCustomAlert('✅ Sucesso', 'Excluído com sucesso!');
+                        setTimeout(() => location.reload(), 1500);
                     } else {
-                        alert('Erro ao salvar: ' + (data.error || 'Desconhecido'));
+                        showCustomAlert('❌ Erro', 'Erro ao excluir: ' + data.error);
                     }
                 })
-                .catch(err => {
-                    alert('Erro de rede ao salvar: ' + err);
-                });
+                .catch(err => showCustomAlert('❌ Erro', 'Erro de rede: ' + err));
+            });
         }
 
-        // Inicializa filtros logo que abre a pagina se as tabelas existirem
-        document.addEventListener('DOMContentLoaded', () => {
-            if (document.getElementById('filterGestorAtual')) {
-                applyFiltersAndPagination();
-            }
-        });
-    </script>
-    <!-- DARK MODE SCRIPT -->
-    <script>
+
+
+        // --- Dark Mode ---
         const darkModeStyles = `
             body.dark-mode { background-color: #121212 !important; color: #e0e0e0 !important; }
-            body.dark-mode .navbar, body.dark-mode .header { background-color: #0d1b2a !important; }
-            body.dark-mode .container, body.dark-mode .card, body.dark-mode .form-container, 
-            body.dark-mode .table-container, body.dark-mode .filters, body.dark-mode .table-wrapper,
-            body.dark-mode .modal-content, body.dark-mode .pagination, body.dark-mode .menu-card {
-                background-color: #1e1e1e !important; box-shadow: 0 4px 6px rgba(0,0,0,0.5) !important;
-                color: #e0e0e0 !important; border-color: #333 !important;
+            body.dark-mode .navbar { background-color: #0d1b2a !important; }
+            body.dark-mode .container, body.dark-mode .filters-container, body.dark-mode table,
+            body.dark-mode .modal-content, body.dark-mode .modal-historico-content {
+                background-color: #1e1e1e !important; color: #e0e0e0 !important; border-color: #333 !important;
             }
-            body.dark-mode .menu-card h3 { color: #e0e0e0 !important; }
             body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
                 background-color: #2d2d2d !important; color: #ffffff !important; border: 1px solid #444 !important;
             }
-            body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #444 !important; color: #e0e0e0 !important; }
             body.dark-mode th { background-color: #1a2a3a !important; }
-            body.dark-mode tbody tr:nth-child(even), body.dark-mode .row-even { background-color: #1a1a1a !important; }
-            body.dark-mode tbody tr:nth-child(odd), body.dark-mode .row-odd { background-color: #222 !important; }
-            body.dark-mode tbody tr:hover { background-color: #333 !important; }
-            body.dark-mode .t-bg { background-color: #2a3b4c !important; }
-            body.dark-mode .info-box, body.dark-mode .highlight, body.dark-mode .warning-box, 
-            body.dark-mode .danger-box, body.dark-mode .success-box, body.dark-mode .status-badge {
-                background-color: #2d2d2d !important; border-color: #555 !important; color: #e0e0e0 !important;
-            }
-            body.dark-mode .btn-outline { border-color: #aaa !important; color: #aaa !important; }
-            body.dark-mode .btn-outline:hover { background-color: #aaa !important; color: #121212 !important; }
-            body.dark-mode .modal { background: rgba(0,0,0,0.8) !important; }
-            body.dark-mode .modal-body { color: #ccc !important; }
-            body.dark-mode .close-btn { color: #ddd !important; }
+            body.dark-mode tr:nth-child(even) { background-color: #1a1a1a !important; }
+            body.dark-mode tr:hover { background-color: #333 !important; }
         `;
         const styleSheet = document.createElement("style");
         styleSheet.innerText = darkModeStyles;
@@ -941,21 +974,32 @@
         }
 
         function updateThemeIcon(isDark) {
-            const moonSVG = '<svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>';
-            const sunSVG = '<svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
-            document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
-                btn.innerHTML = isDark ? sunSVG + ' Modo Claro' : moonSVG + ' Modo Escuro';
+            const btns = document.querySelectorAll('.theme-toggle-btn');
+            btns.forEach(btn => {
+                btn.innerHTML = isDark ? '☀️ Modo Claro' : '🌙 Modo Escuro';
             });
         }
 
+        // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('theme') === 'dark') {
                 document.body.classList.add('dark-mode');
             }
             updateThemeIcon(document.body.classList.contains('dark-mode'));
+            
+            const confirmBtn = document.getElementById('confirmActionBtn');
+            if (confirmBtn) {
+                confirmBtn.onclick = () => {
+                    if (pendingConfirmAction) pendingConfirmAction();
+                    closeCustomConfirm();
+                };
+            }
+            
+            if (document.getElementById('filterGestorAtual')) {
+                applyFiltersAndPagination();
+            }
         });
     </script>
     <script src="{{ url_for('static', filename='notificacoes.js') }}"></script>
 </body>
-
 </html>
