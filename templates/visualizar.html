@@ -516,6 +516,38 @@
             gap: 12px;
             justify-content: flex-end;
         }
+
+        /* Estilos para Impressão */
+        @media print {
+            body * { visibility: hidden; }
+            #modalHistorico, #modalHistorico * { visibility: visible; }
+            #modalHistorico { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                height: auto;
+                background: white; 
+                z-index: 10000; 
+                display: block !important; 
+            }
+            .modal-historico-content { 
+                width: 100%; 
+                max-width: none; 
+                box-shadow: none; 
+                border: none; 
+                padding: 0;
+            }
+            .modal-historico-close, .btn-print-modal { display: none !important; }
+            .timeline-item { 
+                background: #fff; 
+                border-left: 3px solid var(--secondary-blue); 
+                page-break-inside: avoid; 
+                margin-bottom: 15px;
+            }
+            .modal-historico-header { border-bottom: 2px solid #333; }
+            .modal-historico-header h3 { color: #000; }
+        }
     </style>
 </head>
 
@@ -731,10 +763,45 @@
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     Trilha de Auditoria
                 </h3>
-                <button class="modal-historico-close" onclick="fecharHistorico()">&times;</button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="btn-print-modal" onclick="window.print()" title="Imprimir Histórico" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 5px 8px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 12px; color: #1e3a5f;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        Imprimir
+                    </button>
+                    <button class="modal-historico-close" onclick="fecharHistorico()">&times;</button>
+                </div>
             </div>
             <p id="historicoSubtitle" style="font-size: 13px; color: #666; margin-bottom: 16px;"></p>
             <div id="historicoTimeline" class="timeline"></div>
+        </div>
+    </div>
+
+    <div id="customAlertModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="customAlertTitle">⚠️ Atenção</h2>
+            </div>
+            <div class="modal-body">
+                <p id="customAlertMessage" style="white-space: pre-line; line-height: 1.6;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeCustomAlert()">Entendi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="customConfirmModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="customConfirmTitle">⚠️ Atenção</h2>
+            </div>
+            <div class="modal-body">
+                <p id="customConfirmMessage" style="white-space: pre-line; line-height: 1.6;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeCustomConfirm()">Cancelar</button>
+                <button class="btn btn-primary" id="confirmActionBtn">Confirmar</button>
+            </div>
         </div>
     </div>
 
