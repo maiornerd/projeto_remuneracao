@@ -764,10 +764,12 @@
                     Trilha de Auditoria
                 </h3>
                 <div style="display: flex; gap: 10px; align-items: center;">
+                    {% if is_master %}
                     <button class="btn-print-modal" onclick="window.print()" title="Imprimir Histórico" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 5px 8px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 12px; color: #1e3a5f;">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                         Imprimir
                     </button>
+                    {% endif %}
                     <button class="modal-historico-close" onclick="fecharHistorico()">&times;</button>
                 </div>
             </div>
@@ -1028,6 +1030,8 @@
             body.dark-mode th { background-color: #1a2a3a !important; }
             body.dark-mode tr:nth-child(even) { background-color: #1a1a1a !important; }
             body.dark-mode tr:hover { background-color: #333 !important; }
+            body.dark-mode .filters-container h3, body.dark-mode .header-bar h2 { color: #8ab4f8 !important; }
+            body.dark-mode .header-bar h2 svg { stroke: #8ab4f8 !important; }
         `;
         const styleSheet = document.createElement("style");
         styleSheet.innerText = darkModeStyles;

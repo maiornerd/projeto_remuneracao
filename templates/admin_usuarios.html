@@ -168,7 +168,8 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 16px;
-            min-width: 1000px; /* Garante que a tabela não comprima demais os dados */
+            min-width: 1000px;
+            /* Garante que a tabela não comprima demais os dados */
         }
 
         th {
@@ -387,7 +388,12 @@
     <nav class="navbar">
         <h1>🛡️ Gestão de Usuários</h1>
         <div class="nav-right">
-            <button class="btn theme-toggle-btn" onclick="toggleDarkMode()" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); display: inline-flex; align-items: center; gap: 6px;"><svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg> Modo Escuro</button>
+            <button class="btn theme-toggle-btn" onclick="toggleDarkMode()"
+                style="background: transparent; border: 1px solid rgba(255,255,255,0.3); display: inline-flex; align-items: center; gap: 6px;"><svg
+                    class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
+                </svg> Modo Escuro</button>
             <a href="/" class="btn">
                 <svg viewBox="0 0 24 24">
                     <path d="M15 18l-6-6 6-6" />
@@ -468,80 +474,82 @@
             </h2>
             <div class="table-responsive">
                 <table>
-                <thead>
-                    <tr>
-                        <th>Matrícula</th>
-                        <th>Nome</th>
-                        <th>E-mail</th>
-                        <th>Gestor</th>
-                        <th>Senha</th>
-                        <th>Tipo</th>
-                        <th style="text-align: center;">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for u in usuarios %}
-                    <tr id="row-{{ u.matricula }}">
-                        <td>{{ u.matricula }}</td>
-                        <td>{{ u.nome }}</td>
-                        <td>
-                            <input type="email" value="{{ u.email }}" 
-                                onblur="alterarEmail('{{ u.matricula }}', this.value)"
-                                style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; width:100%; min-width:180px;">
-                        </td>
-                        <td>
-                            <select onchange="alterarGestor('{{ u.matricula }}', this.value)"
-                                style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; cursor:pointer; max-width:180px;">
-                                <option value="" {{ 'selected' if not u.gestor_matricula }}>-- Nenhum --</option>
-                                {% for g in gestores %}
-                                <option value="{{ g.matricula }}" {{ 'selected' if u.gestor_matricula == g.matricula }}>{{ g.nome }}</option>
-                                {% endfor %}
-                            </select>
-                        </td>
-                        <td title="{{ u.senha }}">********</td>
-                        <td>
-                            <span
-                                class="badge {{ 'badge-master' if u.tipo == 'master' else ('badge-planejador' if u.tipo == 'planejador' else ('badge-intermediario' if u.tipo == 'intermediario' else 'badge-simples')) }}">
-                                {{ u.tipo | upper }}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="actions">
-                                <select onchange="alterarTipo('{{ u.matricula }}', this.value)"
-                                    style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; cursor:pointer;">
-                                    <option value="simples" {{ 'selected' if u.tipo=='simples' }}>Simples</option>
-                                    <option value="intermediario" {{ 'selected' if u.tipo=='intermediario' }}>
-                                        Intermediário</option>
-                                    <option value="planejador" {{ 'selected' if u.tipo=='planejador' }}>
-                                        Planejador</option>
-                                    <option value="master" {{ 'selected' if u.tipo=='master' }}>Master</option>
+                    <thead>
+                        <tr>
+                            <th>Matrícula</th>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Gestor</th>
+                            <th>Senha</th>
+                            <th>Tipo</th>
+                            <th style="text-align: center;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in usuarios %}
+                        <tr id="row-{{ u.matricula }}">
+                            <td>{{ u.matricula }}</td>
+                            <td>{{ u.nome }}</td>
+                            <td>
+                                <input type="email" value="{{ u.email }}"
+                                    onblur="alterarEmail('{{ u.matricula }}', this.value)"
+                                    style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; width:100%; min-width:180px;">
+                            </td>
+                            <td>
+                                <select onchange="alterarGestor('{{ u.matricula }}', this.value)"
+                                    style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; cursor:pointer; max-width:180px;">
+                                    <option value="" {{ 'selected' if not u.gestor_matricula }}>-- Nenhum --</option>
+                                    {% for g in gestores %}
+                                    <option value="{{ g.matricula }}" {{ 'selected' if u.gestor_matricula==g.matricula
+                                        }}>{{ g.nome }}</option>
+                                    {% endfor %}
                                 </select>
-                                <button class="btn btn-sm" style="background: #8b5cf6; color: white;"
-                                    onclick="resetarSenha('{{ u.matricula }}', '{{ u.nome }}')" title="Resetar Senha">
-                                    <svg viewBox="0 0 24 24"
-                                        style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2;">
-                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                                    </svg>
-                                    Senha
-                                </button>
-                                <button class="btn btn-sm btn-danger"
-                                    onclick="excluirUsuario('{{ u.matricula }}', '{{ u.nome }}')"
-                                    title="Excluir Usuário">
-                                    <svg viewBox="0 0 24 24"
-                                        style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2;">
-                                        <polyline points="3 6 5 6 21 6" />
-                                        <path d="M19 6l-1 14H6L5 6" />
-                                        <path d="M10 11v6M14 11v6" />
-                                        <path d="M9 6V4h6v2" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                            <td title="{{ u.senha }}">********</td>
+                            <td>
+                                <span
+                                    class="badge {{ 'badge-master' if u.tipo == 'master' else ('badge-planejador' if u.tipo == 'planejador' else ('badge-intermediario' if u.tipo == 'intermediario' else 'badge-simples')) }}">
+                                    {{ u.tipo | upper }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    <select onchange="alterarTipo('{{ u.matricula }}', this.value)"
+                                        style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; cursor:pointer;">
+                                        <option value="simples" {{ 'selected' if u.tipo=='simples' }}>Simples</option>
+                                        <option value="intermediario" {{ 'selected' if u.tipo=='intermediario' }}>
+                                            Intermediário</option>
+                                        <option value="planejador" {{ 'selected' if u.tipo=='planejador' }}>
+                                            Planejador</option>
+                                        <option value="master" {{ 'selected' if u.tipo=='master' }}>Master</option>
+                                    </select>
+                                    <button class="btn btn-sm" style="background: #8b5cf6; color: white;"
+                                        onclick="resetarSenha('{{ u.matricula }}', '{{ u.nome }}')"
+                                        title="Resetar Senha">
+                                        <svg viewBox="0 0 24 24"
+                                            style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2;">
+                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                        </svg>
+                                        Senha
+                                    </button>
+                                    <button class="btn btn-sm btn-danger"
+                                        onclick="excluirUsuario('{{ u.matricula }}', '{{ u.nome }}')"
+                                        title="Excluir Usuário">
+                                        <svg viewBox="0 0 24 24"
+                                            style="width:14px;height:14px;stroke:white;fill:none;stroke-width:2;">
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path d="M19 6l-1 14H6L5 6" />
+                                            <path d="M10 11v6M14 11v6" />
+                                            <path d="M9 6V4h6v2" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -613,7 +621,20 @@
             }).then(r => r.json()).then(d => {
                 if (d.success) {
                     showToast(d.message, false);
-                    setTimeout(() => location.reload(), 1000);
+
+                    if (email) {
+                        const subject = "👋 Bem-vindo ao Sistema de Indicações - Seu Acesso";
+                        const linkSistema = window.location.origin;
+                        const body = `Prezado(a) ${nome},\n\nInformamos que o seu perfil de acesso ao Sistema de Indicações do Comitê foi criado com sucesso.\n\nAbaixo seguem as suas credenciais de primeiro acesso:\n🪪 Login/Matrícula: ${matricula}\n🔑 Senha inicial: ${senha}\n\n🔗 Acesso ao sistema: ${linkSistema}\n\nImportante: Por questões de segurança, ao realizar o seu primeiro login, o sistema solicitará a alteração obrigatória da senha.\nPedimos que não compartilhe esta senha com terceiros para garantir a segurança da informação corporativa.\n\nAtenciosamente,\nAdministração do Sistema`;
+
+                        // Utilizamos a criação de timer maior para evitar o cancelamento da navegação do mailto pelo reload.
+                        // Abrir via window.location.href executa o aplicativo externo mantendo a janela funcional.
+                        window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        setTimeout(() => location.reload(), 1000);
+                    }
+
                 } else {
                     showToast(d.error, true);
                 }
@@ -719,10 +740,10 @@
                 }).then(r => r.json()).then(d => {
                     if (d.success) {
                         showToast(d.message, false);
-                        
+
                         // --- MONTA E ABRE O CLIENTE DE E-MAIL VIA MAILTO ---
                         const assunto = `🔑 Nova Senha Temporária - Acesso ao Sistema`;
-                        const corpo = 
+                        const corpo =
                             `Olá ${d.nome} (Matrícula: ${d.matricula}),\n\n` +
                             `Sua senha de acesso ao sistema foi redefinida.\n\n` +
                             `Sua nova senha temporária é: ${d.nova_senha}\n\n` +
@@ -730,7 +751,7 @@
                             `Atenciosamente,\nAdministração do Sistema`;
 
                         const mailtoLink = `mailto:${d.email || ''}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-                        
+
                         // Abre o cliente de e-mail padrão
                         window.location.href = mailtoLink;
 

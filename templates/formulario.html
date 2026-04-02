@@ -830,22 +830,13 @@
                 </svg>
                 Exportar Arquivo
             </button>
-            <button class="btn btn-primary" onclick="sendEmail()"
-                title="Gerar arquivos e abrir e-mail no Thunderbird (Ctrl+K)">
+            <button class="btn btn-primary" style="background-color: #007bff; border-color: #007bff;" onclick="finalizarEEnviar()"
+                title="Concluir processo: salvar, gerar arquivos e preparar e-mail">
                 <svg viewBox="0 0 24 24">
-                    <rect x="2" y="4" width="20" height="16" />
-                    <polyline points="22,6 12,13 2,6" />
+                    <path d="M22 2L11 13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
-                Enviar E-mail
-            </button>
-            <button class="btn btn-success" style="background-color: #17a2b8; border-color: #17a2b8; color: white;"
-                onclick="enviarParaVisualizacao()" title="Enviar para a página de Visualizar Indicações">
-                <svg viewBox="0 0 24 24">
-                    <path d="M5 15l4 4" />
-                    <path d="M14 4l6 6-8 8-6-6z" />
-                    <path d="M9 19l-4 1 1-4" />
-                </svg>
-                Enviar p/ Visualizar
+                Finalizar e Enviar
             </button>
             <button class="btn btn-primary" onclick="toggleSortPanel()" title="Mostrar/ocultar painel de ordenação">
                 <svg viewBox="0 0 24 24">
@@ -2818,9 +2809,9 @@
             }
         });
         // ============================================
-        // FUNÇÃO: ENVIO DE E-MAIL COM THUNDERBIRD
+        // FUNÇÃO UNIFICADA: FINALIZAR E ENVIAR
         // ============================================
-        function sendEmail() {
+        function finalizarEEnviar() {
             // --- 1. VALIDAÇÕES (idênticas às de exportCSV/showPDFModal) ---
             const invalidMatriculas = checkNumericMatriculaBlock();
             if (invalidMatriculas.length > 0) {
@@ -3049,73 +3040,16 @@
             // Abre o Thunderbird (ou cliente de e-mail padrão) com o assunto e corpo pré-preenchidos
             window.location.href = mailtoLink;
 
-            // --- 6. AVISO SOBRE O ANEXO MANUAL ---
-            setTimeout(() => {
-                showCustomAlert(
-                    '📧 E-mail Preparado',
-                    `✅ Os arquivos foram baixados com sucesso na sua pasta de Downloads:\n\n` +
-                    `📄 Indicacoes_Promocao_${date}.pdf\n` +
-                    `📊 Indicacoes_Promocao_${date}.csv\n\n` +
-                    `⚠️ ATENÇÃO: Por segurança, os navegadores não permitem anexar arquivos automaticamente ao e-mail.\n\n` +
-                    `👉 Por favor, anexe manualmente os dois arquivos acima no e-mail que acabou de abrir no seu cliente de e-mail corporativo (Thunderbird, Outlook, Gmail, etc.) antes de enviar.`
-                );
-            }, 1500);
-        }
-
-        function enviarParaVisualizacao() {
-            // VERIFICAÇÃO DE MATRÍCULAS COM LETRAS (SEGURANÇA EXTRA)
-            const invalidMatriculas = checkNumericMatriculaBlock();
-            if (invalidMatriculas.length > 0) {
-                showCustomAlert('⚠️ ATENÇÃO', '❌ BLOQUEADO: O campo matrícula deve conter APENAS números.\n\nPENDÊNCIAS:\n' + invalidMatriculas.join('\n') + '\n\nPor favor, corrija as matrículas antes de prosseguir.');
-                return;
-            }
-
-            const duplicateCheck = hasDuplicatedMatriculas();
-            if (duplicateCheck.hasDuplicates) {
-                showCustomAlert('⚠️ ATENÇÃO', '❌ BLOQUEADO: Existem matrículas duplicadas na tabela.\n\nMatrículas repetidas: ' + duplicateCheck.duplicatedValues.join(', ') + '\n\nPor favor, corrija as matrículas duplicadas antes de prosseguir.');
-                return;
-            }
-
-            const leadershipErrors = checkLeadershipBlock();
-            if (leadershipErrors.length > 0) {
-                const listaNomes = leadershipErrors.join('\n');
-                showCustomAlert('⚠️ ATENÇÃO', '❌ BLOQUEADO: Existem problemas de Avaliação de R&S.\n\n' + listaNomes);
-                return;
-            }
-
-            const trainingErrors = checkTrainingBlock();
-            if (trainingErrors.length > 0) {
-                const listaNomes = trainingErrors.join('\n');
-                showCustomAlert('⚠️ ATENÇÃO', '❌ BLOQUEADO: Problemas de Carta de Treinamento.\n\n' + listaNomes);
-                return;
-            }
-
-            const missingDateErrors = checkMissingDatesBlock();
-            if (missingDateErrors.length > 0) {
-                const listaNomes = missingDateErrors.join('\n');
-                showCustomAlert('⚠️ ATENÇÃO', '❌ BLOQUEADO: Existem informações de data obrigatórias faltando.\n\n' + listaNomes);
-                return;
-            }
-
-            const errors = validateRequiredFields();
-            if (errors.length > 0) {
-                showCustomAlert('⚠️ ATENÇÃO', 'Preencha os campos obrigatórios antes de enviar:\n\n• ' + errors.join('\n• '));
-                return;
-            }
-
-            // Coletar dados
+            // --- 6. ACESSO AO BANCO DE DADOS E AVISO FINAL ---
             const responsavelDestinoEl = document.getElementById('responsavel_destino');
             const responsavelDestino = responsavelDestinoEl && responsavelDestinoEl.selectedIndex >= 0 ? responsavelDestinoEl.options[responsavelDestinoEl.selectedIndex].text : '';
 
             const rowsData = [];
             const rows = document.querySelectorAll('#tableBody tr');
-
-            let indicacoesEnviadas = 0;
             rows.forEach(row => {
                 const matricula = row.querySelector('[data-field="matricula"]').value;
                 if (!matricula) return;
 
-                indicacoesEnviadas++;
                 const rowData = {
                     matriculaCompleta: getMatriculaComEmpresa(matricula),
                     nome: row.querySelector('[data-field="nome"]').value,
@@ -3127,38 +3061,36 @@
                 rowsData.push(rowData);
             });
 
-            if (rowsData.length === 0) {
-                showCustomAlert('⚠️ ATENÇÃO', 'A tabela está vazia. Adicione pelo menos uma indicação válida.');
-                return;
-            }
-
             const payload = {
                 responsavelDestino: responsavelDestino,
                 rows: rowsData
             };
 
-            // Enviar ao backend
-            fetch('/api/salvar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
+            setTimeout(() => {
+                fetch('/api/salvar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // Limpa o cache para que a tabela antiga não volte ao abrir o formulário
                         localStorage.removeItem('tabelaIndicacoesData');
-                        showCustomAlert('✅ Sucesso', `Foram enviadas ${indicacoesEnviadas} indicações para análise do Comitê.\nRedirecionando para o painel de visualização...`);
+                        showCustomAlert(
+                            '✅ Processo Concluído!',
+                            `1. Seu cliente de e-mail padrão foi aberto. NÃO ESQUEÇA de anexar os arquivos (PDF e CSV) que estão em seus Downloads.\n\n2. Foram enviadas ${totalIndicacoes} indicações para o painel do Comitê.\n\nRedirecionando para visualização...`
+                        );
                         setTimeout(() => {
                             window.location.href = '/visualizar';
-                        }, 2500);
+                        }, 4000);
                     } else {
-                        showCustomAlert('❌ Erro', 'Ocorreu um erro ao enviar: ' + (data.error || 'Desconhecido'));
+                        showCustomAlert('❌ Erro', 'Ocorreu um erro ao enviar para o banco: ' + (data.error || 'Desconhecido'));
                     }
                 })
                 .catch(err => {
-                    showCustomAlert('❌ Erro', 'Ocorreu um erro de conexão: ' + err);
+                    showCustomAlert('❌ Erro', 'Ocorreu um erro de conexão com o banco: ' + err);
                 });
+            }, 1000); // Aguarda 1 seg para garantir que o cliente de e-mail abriu sem conflito
         }
 
     </script>
