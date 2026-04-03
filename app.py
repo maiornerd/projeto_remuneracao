@@ -1,9 +1,36 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import sqlite3
 import json
+import os
+from dotenv import load_dotenv
+
+# Load env variables early
+load_dotenv()
+
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_wtf.csrf import CSRFProtect
+from flask_talisman import Talisman
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
-app.secret_key = 'chave_super_secreta_demillus'
+# Load secret key from environment
+app.secret_key = os.environ.get('SECRET_KEY', 'default_dev_key_fallback')
+
+# Apply CSRF Globally
+csrf = CSRFProtect(app)
+
+# Apply Security Headers (Do not force HTTPS since local server uses HTTP)
+Talisman(app, content_security_policy=None, force_https=False, session_cookie_secure=False)
+
+# Apply Rate Limiting
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["1000 per day", "100 per hour"],
+    storage_uri="memory://"
+)
+
 MASTERS_INICIAIS = ['1-082959', '1-082361', '1-079254']
 
 def get_db_connection():
@@ -171,12 +198,17 @@ def graficos():
             'utilizado': total_aprovados
         }
     else:
-        ind_counts = conn.execute('''
+        alvos = [matricula]
+        if session.get('gestor_matricula'):
+            alvos.append(session['gestor_matricula'])
+        placeholders = ','.join(['?'] * len(alvos))
+        
+        ind_counts = conn.execute(f'''
             SELECT TRIM(status) as st, COUNT(*) as qtd 
             FROM indicacoes_item 
-            WHERE gestor_origem_mat = ? OR gestor_destino_mat = ?
+            WHERE gestor_origem_mat IN ({placeholders}) OR gestor_destino_mat IN ({placeholders})
             GROUP BY TRIM(status)
-        ''', (matricula, matricula)).fetchall()
+        ''', alvos + alvos).fetchall()
         headcount_data = None
         
     conn.close()
@@ -290,8 +322,16 @@ def visualizar():
     if session.get('is_master'):
         rows = conn.execute('SELECT * FROM indicacoes_item ORDER BY data_criacao DESC').fetchall()
     else:
-        rows = conn.execute('SELECT * FROM indicacoes_item WHERE gestor_origem_mat = ? OR gestor_destino_mat = ? ORDER BY data_criacao DESC', 
-                            (session['matricula'], session['matricula'])).fetchall()
+        alvos = [session['matricula']]
+        if session.get('gestor_matricula'):
+            alvos.append(session['gestor_matricula'])
+        placeholders = ','.join(['?'] * len(alvos))
+        
+        rows = conn.execute(f'''
+            SELECT * FROM indicacoes_item 
+            WHERE gestor_origem_mat IN ({placeholders}) OR gestor_destino_mat IN ({placeholders}) 
+            ORDER BY data_criacao DESC
+        ''', alvos + alvos).fetchall()
     conn.close()
     
     return render_template('visualizar.html', 
@@ -495,16 +535,17 @@ def relatorio():
     return render_template('relatorio.html', relatorio=relatorio_data, is_master=True, nome=session.get('nome'))
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     if request.method == 'POST':
         matricula = request.form.get('matricula', '').strip()
         senha = request.form.get('senha', '').strip()
         
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM usuarios WHERE matricula = ? AND senha = ?', (matricula, senha)).fetchone()
+        user = conn.execute('SELECT * FROM usuarios WHERE matricula = ?', (matricula,)).fetchone()
         conn.close()
         
-        if user:
+        if user and check_password_hash(user['senha'], senha):
             session['matricula'] = user['matricula']
             session['nome'] = user['nome']
             tipo_usuario = user['tipo'] if user['tipo'] else ('master' if user['matricula'] in MASTERS_INICIAIS else 'simples')
@@ -544,7 +585,7 @@ def alterar_senha():
         if nova_senha != confirmar:
             return render_template('alterar_senha.html', error='As senhas não coincidem.')
         conn = get_db_connection()
-        conn.execute('UPDATE usuarios SET senha = ?, senha_resetada = 0 WHERE matricula = ?', (nova_senha, session['matricula']))
+        conn.execute('UPDATE usuarios SET senha = ?, senha_resetada = 0 WHERE matricula = ?', (generate_password_hash(nova_senha), session['matricula']))
         conn.commit()
         conn.close()
         session.pop('forcar_troca_senha', None)
@@ -601,8 +642,8 @@ def salvar_indicacoes():
     if not dados or 'rows' not in dados:
         return jsonify({'error': 'Dados vazios'}), 400
         
-    matricula_origem = session['matricula']
-    nome_origem = session.get('nome', '')
+    matricula_origem = session.get('gestor_matricula') if session.get('gestor_matricula') else session['matricula']
+    nome_origem = session.get('gestor_nome') if session.get('gestor_nome') else session.get('nome', '')
     
     hoje = datetime.date.today()
     mes_que_vem = (hoje.replace(day=1) + datetime.timedelta(days=32)).replace(day=1)
@@ -769,7 +810,7 @@ def criar_usuario():
     if existe:
         conn.close()
         return jsonify({'error': 'Matrícula já cadastrada no sistema.'}), 400
-    conn.execute("INSERT INTO usuarios (matricula, nome, email, senha, tipo, gestor_matricula) VALUES (?, ?, ?, ?, ?, ?)", (matricula, nome, email, senha, tipo, gestor_matricula))
+    conn.execute("INSERT INTO usuarios (matricula, nome, email, senha, tipo, gestor_matricula) VALUES (?, ?, ?, ?, ?, ?)", (matricula, nome, email, generate_password_hash(senha), tipo, gestor_matricula))
     conn.commit()
     conn.close()
     return jsonify({'success': True, 'message': f'Usu\u00e1rio {nome} criado com sucesso!'})
@@ -825,7 +866,7 @@ def resetar_senha():
         conn.close()
         return jsonify({'error': 'Usuário não encontrado'}), 404
         
-    conn.execute("UPDATE usuarios SET senha = ?, senha_resetada = 1 WHERE matricula = ?", (nova_senha, matricula))
+    conn.execute("UPDATE usuarios SET senha = ?, senha_resetada = 1 WHERE matricula = ?", (generate_password_hash(nova_senha), matricula))
     conn.commit()
     conn.close()
     
@@ -878,6 +919,8 @@ def alterar_email_usuario():
 
 
 if __name__ == '__main__':
+    from waitress import serve
     import os
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', debug=True, port=port)
+    print(f"Servidor de Produção Waitress rodando na porta {port}...")
+    serve(app, host='0.0.0.0', port=port)

@@ -1,3 +1,9 @@
 Flask
 pandas
 openpyxl
+werkzeug
+flask-wtf
+python-dotenv
+flask-talisman
+flask-limiter
+waitress

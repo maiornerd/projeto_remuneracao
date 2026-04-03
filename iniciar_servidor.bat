@@ -26,7 +26,16 @@ pip install -r requirements.txt -q
 echo.
 echo ========================================================
 echo                SERVIDOR INICIADO! 
-echo Acesse no seu navegador: http://localhost:5000
+echo.
+echo [ACESSO LOCAL]
+echo Acesse neste computador: http://localhost:5000
+echo.
+echo [ACESSO PARA OUTROS FUNCIONARIOS NA REDE DA EMPRESA]
+FOR /F "tokens=4 delims= " %%i in ('route print ^| find " 0.0.0.0"') do (
+    echo Acesse o link: http://%%i:5000
+    goto :found_ip
+)
+:found_ip
 echo.
 echo ATENCAO: Mantenha esta janela aberta enquanto utiliza.
 echo ========================================================

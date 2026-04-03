@@ -722,6 +722,27 @@
             color: var(--danger);
         }
     </style>
+
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        (function() {
+            const csrfToken = "{{ csrf_token() }}";
+            const originalFetch = window.fetch;
+            window.fetch = function() {
+                let [resource, config] = arguments;
+                if(config === undefined) {
+                    config = {};
+                }
+                if(config.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method.toUpperCase())) {
+                    if(config.headers === undefined) {
+                        config.headers = {};
+                    }
+                    config.headers['X-CSRFToken'] = csrfToken;
+                }
+                return originalFetch(resource, config);
+            };
+        })();
+    </script>
 </head>
 
 <body>
@@ -2865,9 +2886,8 @@
             });
 
             // --- 3. GERA E FAZ DOWNLOAD DO PDF ---
-            (async () => {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF('l', 'mm', 'a4');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
 
                 doc.setFontSize(16);
                 doc.setTextColor(30, 58, 95);
@@ -2939,162 +2959,163 @@
                     URL.revokeObjectURL(pdfUrl);
                 }, 100);
 
-            })();
+                // --- 4. GERA E FAZ DOWNLOAD DO CSV ---
+                const csvHeaders = [
+                    'Matrícula', 'Nome Completo', 'Setor Atual', 'Cargo Atual', 'Cód. Setor Destino',
+                    'Setor de Destino', 'Cargo Proposto', 'Cargo de Liderança?', 'R&S fez Avaliação?',
+                    'Data Avaliação Comportamental', 'Em Treinamento?', 'Possui Carta?',
+                    'Data Início Treinamento', 'É Substituição?', 'Matrícula Substituído', 'Nome Substituído',
+                    'Motivo Substituição', 'Data Motivo Substituição'
+                ];
 
-            // --- 4. GERA E FAZ DOWNLOAD DO CSV ---
-            const csvHeaders = [
-                'Matrícula', 'Nome Completo', 'Setor Atual', 'Cargo Atual', 'Cód. Setor Destino',
-                'Setor de Destino', 'Cargo Proposto', 'Cargo de Liderança?', 'R&S fez Avaliação?',
-                'Data Avaliação Comportamental', 'Em Treinamento?', 'Possui Carta?',
-                'Data Início Treinamento', 'É Substituição?', 'Matrícula Substituído', 'Nome Substituído',
-                'Motivo Substituição', 'Data Motivo Substituição'
-            ];
+                const empresaSelectEl = document.getElementById('empresa');
+                const empresaTextCSV = empresaSelectEl.options[empresaSelectEl.selectedIndex].text;
+                let csv = `Responsável: ${responsavel}\nEmpresa: ${empresaTextCSV}\n\n`;
+                csv += csvHeaders.join(';') + '\n';
 
-            const empresaSelectEl = document.getElementById('empresa');
-            const empresaTextCSV = empresaSelectEl.options[empresaSelectEl.selectedIndex].text;
-            let csv = `Responsável: ${responsavel}\nEmpresa: ${empresaTextCSV}\n\n`;
-            csv += csvHeaders.join(';') + '\n';
+                document.querySelectorAll('#tableBody tr').forEach(row => {
+                    const matricula = row.querySelector('[data-field="matricula"]').value;
+                    if (!matricula) return;
 
-            document.querySelectorAll('#tableBody tr').forEach(row => {
-                const matricula = row.querySelector('[data-field="matricula"]').value;
-                if (!matricula) return;
+                    const matriculaCompleta = getMatriculaComEmpresa(matricula);
+                    const ehSubstituicao = row.querySelector('[data-field="ehSubstituicao"]').value;
+                    const matriculaSubst = row.querySelector('[data-field="matriculaSubstituto"]').value;
+                    const matriculaSubstCompleta = ehSubstituicao === 'SIM' && matriculaSubst ? getMatriculaComEmpresa(matriculaSubst) : matriculaSubst;
 
-                const matriculaCompleta = getMatriculaComEmpresa(matricula);
-                const ehSubstituicao = row.querySelector('[data-field="ehSubstituicao"]').value;
-                const matriculaSubst = row.querySelector('[data-field="matriculaSubstituto"]').value;
-                const matriculaSubstCompleta = ehSubstituicao === 'SIM' && matriculaSubst ? getMatriculaComEmpresa(matriculaSubst) : matriculaSubst;
+                    const dataAvalInput = row.querySelector('[data-field="dataAvaliacaoComp"]');
+                    let dataAval = getDateFieldValue(dataAvalInput);
+                    if (dataAval && dataAval !== 'N/A') dataAval = convertDateForDisplay(dataAval);
 
-                const dataAvalInput = row.querySelector('[data-field="dataAvaliacaoComp"]');
-                let dataAval = getDateFieldValue(dataAvalInput);
-                if (dataAval && dataAval !== 'N/A') dataAval = convertDateForDisplay(dataAval);
+                    const dataInicioInput = row.querySelector('[data-field="dataInicio"]');
+                    let dataInicio = getDateFieldValue(dataInicioInput);
+                    if (dataInicio && dataInicio !== 'N/A') dataInicio = convertDateForDisplay(dataInicio);
 
-                const dataInicioInput = row.querySelector('[data-field="dataInicio"]');
-                let dataInicio = getDateFieldValue(dataInicioInput);
-                if (dataInicio && dataInicio !== 'N/A') dataInicio = convertDateForDisplay(dataInicio);
+                    const dataDesligInput = row.querySelector('[data-field="dataDesligamento"]');
+                    let dataDeslig = getDateFieldValue(dataDesligInput);
+                    if (dataDeslig && dataDeslig !== 'N/A') dataDeslig = convertDateForDisplay(dataDeslig);
 
-                const dataDesligInput = row.querySelector('[data-field="dataDesligamento"]');
-                let dataDeslig = getDateFieldValue(dataDesligInput);
-                if (dataDeslig && dataDeslig !== 'N/A') dataDeslig = convertDateForDisplay(dataDeslig);
+                    const values = [
+                        matriculaCompleta,
+                        row.querySelector('[data-field="nome"]').value,
+                        row.querySelector('[data-field="setorOrigem"]').value,
+                        row.querySelector('[data-field="cargoAtual"]').value,
+                        row.querySelector('[data-field="codSetorDestino"]').value,
+                        row.querySelector('[data-field="setorDestino"]').value,
+                        row.querySelector('[data-field="cargoProposto"]').value,
+                        row.querySelector('[data-field="cargoLideranca"]').value,
+                        row.querySelector('[data-field="avaliacaoComportamental"]').value,
+                        dataAval,
+                        row.querySelector('[data-field="emTreinamento"]').value,
+                        row.querySelector('[data-field="possuiCarta"]').value,
+                        dataInicio,
+                        ehSubstituicao,
+                        matriculaSubstCompleta,
+                        row.querySelector('[data-field="nomeSubstituto"]').value,
+                        row.querySelector('[data-field="motivoSubstituicao"]').value,
+                        dataDeslig
+                    ].map(v => `"${(v || '').replace(/"/g, '""')}"`);
 
-                const values = [
-                    matriculaCompleta,
-                    row.querySelector('[data-field="nome"]').value,
-                    row.querySelector('[data-field="setorOrigem"]').value,
-                    row.querySelector('[data-field="cargoAtual"]').value,
-                    row.querySelector('[data-field="codSetorDestino"]').value,
-                    row.querySelector('[data-field="setorDestino"]').value,
-                    row.querySelector('[data-field="cargoProposto"]').value,
-                    row.querySelector('[data-field="cargoLideranca"]').value,
-                    row.querySelector('[data-field="avaliacaoComportamental"]').value,
-                    dataAval,
-                    row.querySelector('[data-field="emTreinamento"]').value,
-                    row.querySelector('[data-field="possuiCarta"]').value,
-                    dataInicio,
-                    ehSubstituicao,
-                    matriculaSubstCompleta,
-                    row.querySelector('[data-field="nomeSubstituto"]').value,
-                    row.querySelector('[data-field="motivoSubstituicao"]').value,
-                    dataDeslig
-                ].map(v => `"${(v || '').replace(/"/g, '""')}"`);
-
-                csv += values.join(';') + '\n';
-            });
-
-            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            const csvLink = document.createElement('a');
-            const csvUrl = URL.createObjectURL(blob);
-            csvLink.setAttribute('href', csvUrl);
-            csvLink.setAttribute('download', `Indicacoes_Promocao_${date}.csv`);
-            csvLink.style.visibility = 'hidden';
-            document.body.appendChild(csvLink);
-            csvLink.click();
-            setTimeout(() => {
-                document.body.removeChild(csvLink);
-                URL.revokeObjectURL(csvUrl);
-            }, 100);
-
-            // --- 5. MONTA E ABRE O THUNDERBIRD VIA MAILTO ---
-            // Cria a data atual e adiciona 1 mês para obter o mês seguinte
-            const dataProximoMes = new Date();
-            dataProximoMes.setMonth(dataProximoMes.getMonth() + 1);
-
-            // Formata a data do mês seguinte para "Mês AAAA" em português
-            const mesAno = dataProximoMes.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-
-            const assunto = `Indicações para o Comitê - ${mesAno}`;
-
-            const corpo =
-                `Ao Responsável de Remuneração e Performance,\n\n` +
-                `Estamos enviando em anexo a Tabela de Indicações para o Comitê com as propostas de promoções/transferências referentes ao período de ${mesAno}.\n\n` +
-                `Responsável: ${responsavel}\n` +
-                `Empresa: ${empresaText}\n` +
-                `Total de indicações: ${totalIndicacoes}\n\n` +
-                `Arquivos em anexo:\n` +
-                `✅ Indicacoes_Promocao_${date}.pdf (visualização)\n` +
-                `✅ Indicacoes_Promocao_${date}.csv (processamento)\n\n` +
-                `Ficamos à disposição para esclarecimentos.\n\n` +
-                `Atenciosamente,\n${responsavel}`;
-
-            let mailtoLink = `mailto:?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-
-            // Abre o Thunderbird (ou cliente de e-mail padrão) com o assunto e corpo pré-preenchidos
-            window.location.href = mailtoLink;
-
-            // --- 6. ACESSO AO BANCO DE DADOS E AVISO FINAL ---
-            const responsavelDestinoEl = document.getElementById('responsavel_destino');
-            const responsavelDestino = responsavelDestinoEl && responsavelDestinoEl.selectedIndex >= 0 ? responsavelDestinoEl.options[responsavelDestinoEl.selectedIndex].text : '';
-
-            const rowsData = [];
-            const rows = document.querySelectorAll('#tableBody tr');
-            rows.forEach(row => {
-                const matricula = row.querySelector('[data-field="matricula"]').value;
-                if (!matricula) return;
-
-                const rowData = {
-                    matriculaCompleta: getMatriculaComEmpresa(matricula),
-                    nome: row.querySelector('[data-field="nome"]').value,
-                    setorOrigem: row.querySelector('[data-field="setorOrigem"]').value,
-                    setorDestino: row.querySelector('[data-field="setorDestino"]').value,
-                    cargoAtual: row.querySelector('[data-field="cargoAtual"]').value,
-                    cargoProposto: row.querySelector('[data-field="cargoProposto"]').value
-                };
-                rowsData.push(rowData);
-            });
-
-            const payload = {
-                responsavelDestino: responsavelDestino,
-                rows: rowsData
-            };
-
-            setTimeout(() => {
-                fetch('/api/salvar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        localStorage.removeItem('tabelaIndicacoesData');
-                        showCustomAlert(
-                            '✅ Processo Concluído!',
-                            `1. Seu cliente de e-mail padrão foi aberto. NÃO ESQUEÇA de anexar os arquivos (PDF e CSV) que estão em seus Downloads.\n\n2. Foram enviadas ${totalIndicacoes} indicações para o painel do Comitê.\n\nRedirecionando para visualização...`
-                        );
-                        setTimeout(() => {
-                            window.location.href = '/visualizar';
-                        }, 4000);
-                    } else {
-                        showCustomAlert('❌ Erro', 'Ocorreu um erro ao enviar para o banco: ' + (data.error || 'Desconhecido'));
-                    }
-                })
-                .catch(err => {
-                    showCustomAlert('❌ Erro', 'Ocorreu um erro de conexão com o banco: ' + err);
+                    csv += values.join(';') + '\n';
                 });
-            }, 1000); // Aguarda 1 seg para garantir que o cliente de e-mail abriu sem conflito
-        }
 
-    </script>
-    <!-- DARK MODE SCRIPT -->
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const csvLink = document.createElement('a');
+                const csvUrl = URL.createObjectURL(blob);
+                csvLink.setAttribute('href', csvUrl);
+                csvLink.setAttribute('download', `Indicacoes_Promocao_${date}.csv`);
+                csvLink.style.visibility = 'hidden';
+                document.body.appendChild(csvLink);
+                csvLink.click();
+                setTimeout(() => {
+                    document.body.removeChild(csvLink);
+                    URL.revokeObjectURL(csvUrl);
+                }, 100);
+
+                setTimeout(() => {
+                    // --- 5. MONTA E ABRE O THUNDERBIRD VIA MAILTO ---
+                    // Cria a data atual e adiciona 1 mês para obter o mês seguinte
+                    const dataProximoMes = new Date();
+                    dataProximoMes.setMonth(dataProximoMes.getMonth() + 1);
+
+                    // Formata a data do mês seguinte para "Mês AAAA" em português
+                    const mesAno = dataProximoMes.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+                    const assunto = `Indicações para o Comitê - ${mesAno}`;
+
+                    const corpo =
+                        `Ao Responsável de Remuneração e Performance,\n\n` +
+                        `Estamos enviando em anexo a Tabela de Indicações para o Comitê com as propostas de promoções/transferências referentes ao período de ${mesAno}.\n\n` +
+                        `Responsável: ${responsavel}\n` +
+                        `Empresa: ${empresaText}\n` +
+                        `Total de indicações: ${totalIndicacoes}\n\n` +
+                        `Arquivos em anexo:\n` +
+                        `✅ Indicacoes_Promocao_${date}.pdf (visualização)\n` +
+                        `✅ Indicacoes_Promocao_${date}.csv (processamento)\n\n` +
+                        `Ficamos à disposição para esclarecimentos.\n\n` +
+                        `Atenciosamente,\n${responsavel}`;
+
+                    let mailtoLink = `mailto:?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+
+                    // Abre o Thunderbird (ou cliente de e-mail padrão) com o assunto e corpo pré-preenchidos
+                    window.location.href = mailtoLink;
+
+                    // --- 6. ACESSO AO BANCO DE DADOS E AVISO FINAL ---
+                    const responsavelDestinoEl = document.getElementById('responsavel_destino');
+                    const responsavelDestino = responsavelDestinoEl && responsavelDestinoEl.selectedIndex >= 0 ? responsavelDestinoEl.options[responsavelDestinoEl.selectedIndex].text : '';
+
+                    const rowsData = [];
+                    const rows = document.querySelectorAll('#tableBody tr');
+                    rows.forEach(row => {
+                        const matricula = row.querySelector('[data-field="matricula"]').value;
+                        if (!matricula) return;
+
+                        const rowData = {
+                            matriculaCompleta: getMatriculaComEmpresa(matricula),
+                            nome: row.querySelector('[data-field="nome"]').value,
+                            setorOrigem: row.querySelector('[data-field="setorOrigem"]').value,
+                            setorDestino: row.querySelector('[data-field="setorDestino"]').value,
+                            cargoAtual: row.querySelector('[data-field="cargoAtual"]').value,
+                            cargoProposto: row.querySelector('[data-field="cargoProposto"]').value
+                        };
+                        rowsData.push(rowData);
+                    });
+
+                    const payload = {
+                        responsavelDestino: responsavelDestino,
+                        rows: rowsData
+                    };
+
+                    setTimeout(() => {
+                        fetch('/api/salvar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                localStorage.removeItem('tabelaIndicacoesData');
+                                showCustomAlert(
+                                    '✅ Processo Concluído!',
+                                    `1. Seu cliente de e-mail padrão foi aberto. NÃO ESQUEÇA de anexar os arquivos (PDF e CSV) que estão em seus Downloads.\n\n2. Foram enviadas ${totalIndicacoes} indicações para o painel do Comitê.\n\nRedirecionando para visualização...`
+                                );
+                                setTimeout(() => {
+                                    window.location.href = '/visualizar';
+                                }, 4000);
+                            } else {
+                                showCustomAlert('❌ Erro', 'Ocorreu um erro ao enviar para o banco: ' + (data.error || 'Desconhecido'));
+                            }
+                        })
+                        .catch(err => {
+                            showCustomAlert('❌ Erro', 'Ocorreu um erro de conexão com o banco: ' + err);
+                        });
+                    }, 500); 
+                    
+                }, 800); 
+            }
+
+</script>
+<!-- DARK MODE SCRIPT -->
     <script>
         const darkModeStyles = `
             body.dark-mode { background-color: #121212 !important; color: #e0e0e0 !important; }
