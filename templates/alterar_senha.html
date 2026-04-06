@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alterar Senha - Sistema de Indicações</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e8f1f8 0%, #f5f3f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 440px;
+        }
+        .lock-icon {
+            width: 60px; height: 60px; margin: 0 auto 16px;
+            background: #fff7ed; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .lock-icon svg {
+            width: 30px; height: 30px; stroke: #ea580c;
+            fill: none; stroke-width: 2;
+        }
+        h2 {
+            color: #1e3a5f;
+            margin-bottom: 8px;
+            text-align: center;
+            font-size: 22px;
+        }
+        .subtitle {
+            text-align: center; color: #64748b; font-size: 14px;
+            margin-bottom: 24px; line-height: 1.4;
+        }
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #1e3a5f;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #2c5f8d;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            padding: 0;
+            transition: color 0.3s;
+        }
+        .password-toggle:hover { color: #1e3a5f; }
+        .password-input { padding-right: 45px !important; }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #1e3a5f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn:hover { background: #2c5f8d; }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .info-box {
+            background: #fffbeb;
+            border: 1px solid #fbbf24;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            text-align: center;
+            line-height: 1.4;
+        }
+    </style>
+
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        (function() {
+            const csrfToken = "{{ csrf_token() }}";
+            const originalFetch = window.fetch;
+            window.fetch = function() {
+                let [resource, config] = arguments;
+                if(config === undefined) {
+                    config = {};
+                }
+                if(config.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method.toUpperCase())) {
+                    if(config.headers === undefined) {
+                        config.headers = {};
+                    }
+                    config.headers['X-CSRFToken'] = csrfToken;
+                }
+                return originalFetch(resource, config);
+            };
+        })();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="lock-icon">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                <circle cx="12" cy="16" r="1"/>
+            </svg>
+        </div>
+        <h2>Alterar Senha</h2>
+        <p class="subtitle">Por segurança, defina uma nova senha pessoal para continuar.</p>
+
+        <div class="info-box">
+            ⚠️ Este é seu primeiro acesso ou sua senha foi resetada pelo administrador.
+        </div>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/alterar_senha">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="form-group">
+                <label>Nova Senha</label>
+                <div style="position: relative;">
+                    <input type="password" name="nova_senha" id="new-password" class="password-input" required placeholder="Mínimo 4 caracteres" minlength="4">
+                    <button type="button" class="password-toggle" onclick="togglePassword('new-password')">
+                        <svg id="eye-icon-new-password" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Confirmar Nova Senha</label>
+                <div style="position: relative;">
+                    <input type="password" name="confirmar_senha" id="confirm-password" class="password-input" required placeholder="Repita a nova senha">
+                    <button type="button" class="password-toggle" onclick="togglePassword('confirm-password')">
+                        <svg id="eye-icon-confirm-password" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="btn">Salvar Nova Senha</button>
+        </form>
+    </div>
+
+    <script>
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            const icon = document.getElementById('eye-icon-' + fieldId);
+            if (field.type === 'password') {
+                field.type = 'text';
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+            } else {
+                field.type = 'password';
+                icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+            }
+        }
+    </script>
+</body>
+</html>

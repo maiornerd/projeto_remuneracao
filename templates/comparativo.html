@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparativo (HC vs Efetivo)</title>
+    <style>
+        :root {
+            --primary-blue: #1e3a5f;
+            --secondary-blue: #3A6EA5;
+            --light-bg: #f4f7f6;
+            --border-color: #dee2e6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+
+        body { background-color: var(--light-bg); color: #333; display: flex; flex-direction: column; height: 100vh; }
+
+        .navbar {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            background: var(--secondary-blue);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .btn:hover { background: #2c5282; }
+
+        .container { flex: 1; padding: 15px; display: flex; flex-direction: column; overflow: hidden; }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            align-items: flex-end;
+        }
+
+        .filter-group { display: flex; flex-direction: column; flex: 1; }
+        .filter-group label { font-size: 12px; font-weight: bold; color: var(--primary-blue); margin-bottom: 4px; }
+        .filter-group select { padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; background: white; }
+
+        .table-container {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: auto;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
+        th { background-color: #f8f9fa; font-weight: 600; color: var(--primary-blue); position: sticky; top: 0; z-index: 10; font-size: 12px; text-transform: uppercase; }
+        tr:hover { background-color: #f1f5f9; }
+
+        .saldo-positivo { color: #10B981; font-weight: bold; background: #e6fcf5; padding: 2px 6px; border-radius: 4px; }
+        .saldo-negativo { color: #EF4444; font-weight: bold; background: #fef2f2; padding: 2px 6px; border-radius: 4px; }
+        .saldo-exato { color: #64748b; font-weight: bold; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+
+        /* Multi-select dropdown */
+        .multi-select-wrapper { position: relative; }
+        .multi-select-trigger {
+            padding: 6px 28px 6px 8px; border: 1px solid var(--border-color); border-radius: 4px;
+            font-size: 13px; background: white; cursor: pointer; min-height: 32px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            display: flex; align-items: center;
+            appearance: none; -webkit-appearance: none;
+        }
+        .multi-select-trigger::after {
+            content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            border: 5px solid transparent; border-top-color: #666; pointer-events: none;
+        }
+        .multi-select-dropdown {
+            display: none; position: absolute; top: 100%; left: 0; right: 0;
+            background: white; border: 1px solid var(--border-color); border-radius: 0 0 4px 4px;
+            max-height: 260px; overflow-y: auto; z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .multi-select-dropdown.open { display: block; }
+        .multi-select-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px; cursor: pointer; font-size: 13px;
+            transition: background 0.15s;
+        }
+        .multi-select-item:hover { background: #e9ecef; }
+        .multi-select-item input[type="checkbox"] {
+            accent-color: var(--secondary-blue); width: 15px; height: 15px; cursor: pointer;
+        }
+        .multi-select-item.select-all { border-bottom: 1px solid var(--border-color); font-weight: 600; color: var(--primary-blue); }
+        .ms-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--secondary-blue); color: white; border-radius: 10px;
+            font-size: 11px; min-width: 20px; height: 20px; padding: 0 6px; margin-right: 6px;
+        }
+
+        body.dark-mode { background-color: #121212; color: #e0e0e0; }
+        body.dark-mode .navbar { background-color: #0d1b2a; }
+        body.dark-mode .filters, body.dark-mode .table-container { background-color: #1e1e1e; border: 1px solid #333; }
+        body.dark-mode th { background-color: #2d2d2d; color: #8ab4f8; border-color: #444; }
+        body.dark-mode td { border-color: #333; }
+        body.dark-mode select, body.dark-mode .multi-select-trigger { background-color: #2d2d2d; color: #e0e0e0; border-color: #444; }
+        body.dark-mode .multi-select-dropdown { background-color: #2d2d2d; border-color: #444; }
+        body.dark-mode .multi-select-item { color: #e0e0e0; }
+        body.dark-mode .multi-select-item:hover { background: #3a3a3a; }
+        body.dark-mode .multi-select-item.select-all { border-color: #555; color: #8ab4f8; }
+        body.dark-mode .multi-select-trigger::after { border-top-color: #aaa; }
+        body.dark-mode .filter-group label { color: #8ab4f8; }
+        body.dark-mode tr:hover { background-color: #2d2d2d; }
+        body.dark-mode .saldo-positivo { color: #34d399; background: #064e3b; }
+        body.dark-mode .saldo-negativo { color: #f87171; background: #7f1d1d; }
+        body.dark-mode .saldo-exato { color: #94a3b8; background: #334155; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div style="display: flex; flex-direction: column;">
+            <h1>Comparativo (Headcount vs Efetivo)</h1>
+            <span style="font-size: 13px; margin-top: 4px; opacity: 0.9;">Visualizando como: <strong>{{ nome }}</strong></span>
+        </div>
+        <div class="nav-right" style="display: flex; gap: 10px;">
+            <button class="btn theme-toggle-btn" onclick="toggleDarkMode()" style="background: transparent; border: 1px solid white; display: inline-flex; align-items: center; gap: 6px;">
+                <svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg> Modo Escuro
+            </button>
+            <a href="/" class="btn" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg> Voltar ao Menu
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="filters">
+            <div class="filter-group">
+                <label for="flt_mes">Mês de Referência do Orçamento (Headcount)</label>
+                <select id="flt_mes" onchange="carregarDados()">
+                    <option value="1">Janeiro</option>
+                    <option value="2">Fevereiro</option>
+                    <option value="3">Março</option>
+                    <option value="4">Abril</option>
+                    <option value="5" selected>Maio</option>
+                    <option value="6">Junho</option>
+                    <option value="7">Julho</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                </select>
+            </div>
+
+            {% if is_master or is_planejador %}
+            <div class="filter-group">
+                <label for="flt_gestores">Gestor</label>
+                <select id="flt_gestores" onchange="atualizarFiltroCargo(); renderTabela()">
+                    <option value="">TODOS OS GESTORES</option>
+                </select>
+            </div>
+            {% else %}
+                <input type="hidden" id="flt_gestores" value="{{ nome }}">
+            {% endif %}
+
+            <div class="filter-group">
+                <label>Cargo</label>
+                <div class="multi-select-wrapper" id="cargoMultiSelect">
+                    <div class="multi-select-trigger" onclick="toggleCargoDropdown()">TODOS OS CARGOS</div>
+                    <div class="multi-select-dropdown" id="cargoDropdown">
+                        <!-- Preenchido via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-group" style="flex: 0;">
+                <button class="btn btn-success" onclick="exportarTabela()" style="height: 38px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Exportar
+                </button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Gestor</th>
+                        <th>Setor</th>
+                        <th>Cargo</th>
+                        <th style="text-align: center;">Vagas Orçadas</th>
+                        <th style="text-align: center;">Efetivo Real</th>
+                        <th style="text-align: center;">Saldo</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="6" style="text-align: center; padding: 20px;">Carregando dados...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        let allDataCache = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-mode'); }
+            updateThemeIcon(document.body.classList.contains('dark-mode'));
+            carregarDados();
+        });
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const moonSVG = '<svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>';
+            const sunSVG = '<svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+            document.querySelectorAll('.theme-toggle-btn').forEach(b => b.innerHTML = isDark ? sunSVG + ' Modo Claro' : moonSVG + ' Modo Escuro');
+        }
+
+        function carregarDados() {
+            const mes = document.getElementById('flt_mes').value;
+            let url = `/api/comparativo_dados?mes=${mes}`;
+            
+            fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                allDataCache = data;
+                
+                // Popula combo de Gestores (Master/Planejador)
+                const gestoresCombo = document.getElementById('flt_gestores');
+                if (gestoresCombo && gestoresCombo.tagName === 'SELECT') {
+                    const uniqueGestores = Array.from(new Set(data.map(d => d.gestor).filter(Boolean))).sort();
+                    const currentValue = gestoresCombo.value;
+                    gestoresCombo.innerHTML = '<option value="">TODOS OS GESTORES</option>';
+                    uniqueGestores.forEach(g => {
+                        const opt = document.createElement('option');
+                        opt.value = g; opt.textContent = g;
+                        if(g === currentValue) opt.selected = true;
+                        gestoresCombo.appendChild(opt);
+                    });
+                }
+                
+                atualizarFiltroCargo();
+                renderTabela();
+            })
+            .catch(e => console.error('Erro na carga:', e));
+        }
+
+        // --- Multi-select Cargo ---
+        let selectedCargos = [];
+
+        function toggleCargoDropdown() {
+            document.getElementById('cargoDropdown').classList.toggle('open');
+        }
+
+        // Fechar ao clicar fora
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('cargoMultiSelect');
+            if (wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('cargoDropdown').classList.remove('open');
+            }
+        });
+
+        function atualizarFiltroCargo() {
+            const dropdown = document.getElementById('cargoDropdown');
+            if (!dropdown) return;
+
+            const gestorFiltro = document.getElementById('flt_gestores').value;
+
+            const dadosFiltrados = allDataCache.filter(item => {
+                if (gestorFiltro && item.gestor !== gestorFiltro) return false;
+                return true;
+            });
+
+            const uniqueCargos = Array.from(new Set(dadosFiltrados.map(d => d.funcao).filter(Boolean))).sort();
+
+            // Preserva seleções que ainda existem no novo conjunto
+            selectedCargos = selectedCargos.filter(c => uniqueCargos.includes(c));
+
+            let html = '';
+            html += `<label class="multi-select-item select-all">
+                        <input type="checkbox" id="cargoSelectAll" onchange="toggleAllCargos(this.checked)" ${selectedCargos.length === 0 ? 'checked' : ''}> TODOS OS CARGOS
+                     </label>`;
+
+            uniqueCargos.forEach(c => {
+                const checked = selectedCargos.includes(c) ? 'checked' : '';
+                html += `<label class="multi-select-item">
+                            <input type="checkbox" value="${c}" onchange="onCargoCheck(this)" ${checked}> ${c}
+                         </label>`;
+            });
+            dropdown.innerHTML = html;
+            atualizarTriggerLabel();
+        }
+
+        function onCargoCheck(cb) {
+            if (cb.checked) {
+                if (!selectedCargos.includes(cb.value)) selectedCargos.push(cb.value);
+            } else {
+                selectedCargos = selectedCargos.filter(c => c !== cb.value);
+            }
+            // Desmarcar "TODOS" se algum individual está marcado
+            const allCb = document.getElementById('cargoSelectAll');
+            if (allCb) allCb.checked = (selectedCargos.length === 0);
+            atualizarTriggerLabel();
+            renderTabela();
+        }
+
+        function toggleAllCargos(checked) {
+            if (checked) {
+                // Limpar seleção individual = mostra tudo
+                selectedCargos = [];
+                document.querySelectorAll('#cargoDropdown input[type=checkbox]:not(#cargoSelectAll)').forEach(cb => cb.checked = false);
+            }
+            atualizarTriggerLabel();
+            renderTabela();
+        }
+
+        function atualizarTriggerLabel() {
+            const trigger = document.querySelector('#cargoMultiSelect .multi-select-trigger');
+            if (!trigger) return;
+            if (selectedCargos.length === 0) {
+                trigger.innerHTML = 'TODOS OS CARGOS';
+            } else if (selectedCargos.length === 1) {
+                trigger.innerHTML = selectedCargos[0];
+            } else {
+                trigger.innerHTML = `<span class="ms-badge">${selectedCargos.length}</span> cargos selecionados`;
+            }
+        }
+
+        function renderTabela() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            const gestorFiltro = document.getElementById('flt_gestores').value;
+
+            const filteredData = allDataCache.filter(item => {
+                if(gestorFiltro && item.gestor !== gestorFiltro) return false;
+                if(selectedCargos.length > 0 && !selectedCargos.includes(item.funcao)) return false;
+                return true;
+            });
+
+            if(filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Nenhum dado encontrado.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            filteredData.forEach(row => {
+                const saldo = row.saldo;
+                let classeSaldo = 'saldo-exato';
+                if(saldo > 0) classeSaldo = 'saldo-positivo';
+                if(saldo < 0) classeSaldo = 'saldo-negativo';
+                
+                html += `
+                    <tr>
+                        <td>${row.gestor || '-'}</td>
+                        <td>${row.setor || '-'}</td>
+                        <td>${row.funcao || '-'}</td>
+                        <td style="text-align: center;">${row.orcado}</td>
+                        <td style="text-align: center;">${row.realizado}</td>
+                        <td style="text-align: center;"><span class="${classeSaldo}">${saldo}</span></td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function exportarTabela() {
+            const table = document.getElementById("dataTable");
+            const wb = XLSX.utils.table_to_book(table, {sheet: "Comparativo"});
+            XLSX.writeFile(wb, "Comparativo_Headcount_Efetivo.xlsx");
+        }
+    </script>
+</body>
+</html>

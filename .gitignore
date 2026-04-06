@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+app.db
+*.xlsx
+*.xlsx.bak
+*.txt
+check_users*.py
+debug_*.py
+implement_phase*.py
+test_*.py
+venv/
+.env
+.vscode/
+.idea/
+*.log

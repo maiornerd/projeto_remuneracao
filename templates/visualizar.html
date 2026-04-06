@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Indicações - Comitê</title>
+    <style>
+        :root {
+            --primary-blue: #1e3a5f;
+            --secondary-blue: #3A6EA5;
+            --light-bg: #f4f7f6;
+            --white: #ffffff;
+            --gray: #6c757d;
+            --border-color: #dee2e6;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn {
+            background: var(--secondary-blue);
+            color: var(--white);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #2c5282;
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #bd2130;
+        }
+
+        .container {
+            width: 100%;
+            padding: 20px 30px;
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header-bar h2 {
+            color: var(--primary-blue);
+            font-size: 22px;
+        }
+
+        .filters-container {
+            background: var(--white);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .filter-input:focus {
+            border-color: var(--secondary-blue);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--white);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #e9ecef;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .status-badge[data-status="Em análise"] {
+            background-color: var(--warning);
+            color: #000;
+        }
+
+        .status-badge[data-status="Em Comitê"] {
+            background-color: var(--info);
+        }
+
+        .status-badge[data-status="Aprovado"] {
+            background-color: var(--success);
+        }
+
+        .status-badge[data-status="Reprovado"] {
+            background-color: var(--danger);
+        }
+
+        .obs-input {
+            width: 200px;
+            padding: 6px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: #fffdf5;
+            font-size: 12px;
+        }
+
+        .status-select {
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            font-size: 12px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            color: var(--gray);
+            background: var(--white);
+            border-radius: 8px;
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -125px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: normal;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .navbar .btn svg,
+        .header-bar h2 svg,
+        .header-bar .btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            vertical-align: middle;
+        }
+
+        .header-bar h2 {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Ícone */
+        .tooltip-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .tooltip-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: #3b82f6;
+            /* azul moderno */
+            fill: none;
+            stroke-width: 2;
+            transition: 0.25s ease;
+        }
+
+        /* Hover no ícone */
+        .tooltip-icon:hover svg {
+            transform: scale(1.2);
+            stroke: #1d4ed8;
+        }
+
+        /* TOOLTIP BASE */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* TEXTO */
+        .tooltiptext {
+            visibility: hidden;
+            opacity: 0;
+            width: max-content;
+            max-width: 250px;
+            background: #1f2937;
+            color: #fff;
+            text-align: left;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+
+            position: absolute;
+            z-index: 10;
+            bottom: 130%;
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
+
+            transition: all 0.25s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        /* SETINHA */
+        .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px;
+            border-style: solid;
+            border-color: #1f2937 transparent transparent transparent;
+        }
+
+        /* MOSTRAR */
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Histórico / Audit Trail */
+        .btn-historico {
+            background: transparent;
+            border: 1px solid var(--secondary-blue);
+            border-radius: 6px;
+            padding: 5px 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--secondary-blue);
+            transition: all 0.3s;
+        }
+        .btn-historico:hover {
+            background: var(--secondary-blue);
+            color: white;
+        }
+        .btn-historico:hover svg { stroke: white; }
+        .btn-historico svg {
+            width: 16px; height: 16px;
+            stroke: var(--secondary-blue);
+            fill: none; stroke-width: 2;
+            transition: stroke 0.3s;
+        }
+
+        /* Modal Histórico */
+        .modal-historico {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6); z-index: 9999;
+            justify-content: center; align-items: center;
+        }
+        .modal-historico.active { display: flex; }
+        .modal-historico-content {
+            background: white; border-radius: 12px;
+            width: 90%; max-width: 550px; max-height: 80vh;
+            overflow-y: auto; padding: 24px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .modal-historico-header {
+            display: flex; justify-content: space-between;
+            align-items: center; border-bottom: 2px solid #e9ecef;
+            padding-bottom: 12px; margin-bottom: 16px;
+        }
+        .modal-historico-header h3 {
+            margin: 0; font-size: 18px; color: var(--primary-blue);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .modal-historico-header h3 svg {
+            width: 20px; height: 20px; stroke: var(--secondary-blue);
+            fill: none; stroke-width: 2;
+        }
+        .modal-historico-close {
+            background: transparent; border: none;
+            font-size: 28px; cursor: pointer; color: #888;
+            line-height: 1;
+        }
+        .modal-historico-close:hover { color: #333; }
+
+        /* Timeline */
+        .timeline { position: relative; padding-left: 28px; }
+        .timeline::before {
+            content: ''; position: absolute; left: 9px; top: 0; bottom: 0;
+            width: 2px; background: linear-gradient(180deg, var(--secondary-blue), #bbb);
+        }
+        .timeline-item {
+            position: relative; margin-bottom: 20px;
+            padding: 12px 14px; background: #f8f9fa;
+            border-radius: 8px; border-left: 3px solid var(--secondary-blue);
+        }
+        .timeline-item::before {
+            content: ''; position: absolute; left: -24px; top: 16px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--secondary-blue); border: 2px solid white;
+            box-shadow: 0 0 0 2px var(--secondary-blue);
+        }
+        .timeline-date {
+            font-size: 11px; color: #888; margin-bottom: 4px;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .timeline-user {
+            font-size: 12px; font-weight: 600;
+            color: var(--primary-blue); margin-bottom: 4px;
+        }
+        .timeline-acao { font-size: 13px; color: #333; line-height: 1.4; }
+        .timeline-empty {
+            text-align: center; color: #aaa; padding: 30px;
+            font-style: italic;
+        }
+        /* Custom Modal (Ported from formulario.html) */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000; /* Higher than other elements */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease;
+            margin: auto;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        @keyframes modalSlideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        .modal-header h2 {
+            color: #3A6EA5;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+        .modal-body {
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: #333;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Estilos para Impressão */
+        @media print {
+            body * { visibility: hidden; }
+            #modalHistorico, #modalHistorico * { visibility: visible; }
+            #modalHistorico { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                height: auto;
+                background: white; 
+                z-index: 10000; 
+                display: block !important; 
+            }
+            .modal-historico-content { 
+                width: 100%; 
+                max-width: none; 
+                box-shadow: none; 
+                border: none; 
+                padding: 0;
+            }
+            .modal-historico-close, .btn-print-modal { display: none !important; }
+            .timeline-item { 
+                background: #fff; 
+                border-left: 3px solid var(--secondary-blue); 
+                page-break-inside: avoid; 
+                margin-bottom: 15px;
+            }
+            .modal-historico-header { border-bottom: 2px solid #333; }
+            .modal-historico-header h3 { color: #000; }
+        }
+    </style>
+
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        (function() {
+            const csrfToken = "{{ csrf_token() }}";
+            const originalFetch = window.fetch;
+            window.fetch = function() {
+                let [resource, config] = arguments;
+                if(config === undefined) {
+                    config = {};
+                }
+                if(config.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method.toUpperCase())) {
+                    if(config.headers === undefined) {
+                        config.headers = {};
+                    }
+                    config.headers['X-CSRFToken'] = csrfToken;
+                }
+                return originalFetch(resource, config);
+            };
+        })();
+    </script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div style="display: flex; flex-direction: column;">
+            <h1>Painel de Indicações - Comitê</h1>
+            <span style="font-size: 13px; margin-top: 4px; opacity: 0.9;">Visualizando como: <strong>{{ nome_gestor }}</strong></span>
+        </div>
+        <div class="nav-right">
+            <button class="btn theme-toggle-btn" onclick="toggleDarkMode()" style="margin-right: 5px; background: transparent; border: 1px solid white; display: inline-flex; align-items: center; gap: 6px; color: white;">
+                <svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg> Modo Escuro
+            </button>
+            <a href="/" class="btn" style="display: inline-flex; align-items: center; gap: 6px;">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M15 18l-6-6 6-6" />
+                    <line x1="9" y1="12" x2="21" y2="12" />
+                </svg> Voltar ao Menu
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        {% if indicacoes|length > 0 %}
+        <div class="filters-container">
+            <h3 style="width: 100%; color: var(--primary-blue); margin-bottom: 5px; font-size: 15px;">🔍 Filtros Rápidos
+            </h3>
+            <input type="text" id="filterGestorAtual" class="filter-input" placeholder="Filtrar Gestor Atual"
+                onkeyup="applyFiltersAndPagination()">
+            <input type="text" id="filterGestorNovo" class="filter-input" placeholder="Filtrar Gestor Novo"
+                onkeyup="applyFiltersAndPagination()">
+            <input type="text" id="filterMatricula" class="filter-input" placeholder="Filtrar Matrícula"
+                onkeyup="applyFiltersAndPagination()">
+            <input type="text" id="filterMesAno" class="filter-input" placeholder="Filtrar Mês/Ano Mov."
+                onkeyup="applyFiltersAndPagination()">
+        </div>
+        {% endif %}
+
+        <div class="header-bar">
+
+            <h2>
+                <!-- DOCUMENTO / HISTÓRICO -->
+                <svg viewBox="0 0 24 24" style="margin-right: 8px;">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="8" y1="13" x2="16" y2="13" />
+                    <line x1="8" y1="17" x2="16" y2="17" />
+                </svg>
+
+                Acompanhamento de Indicações
+            </h2>
+
+            <div style="display: flex; gap: 10px;">
+
+                {% if is_master and indicacoes|length > 0 %}
+
+
+
+                <button class="btn btn-danger" onclick="excluirSelecionados()">
+
+                    <!-- LIXEIRA -->
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4h6v2" />
+                    </svg>
+
+                    Excluir Selecionados
+                </button>
+
+                <button class="btn btn-success" onclick="salvarAlteracoes()">
+
+                    <!-- SALVAR -->
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+
+                    Salvar Alterações (Master)
+                </button>
+
+                {% endif %}
+
+            </div>
+        </div>
+
+        {% if indicacoes|length == 0 %}
+        <div class="empty-state">
+            <h3 style="color: #333;">Nenhuma indicação encontrada!</h3>
+            <p style="color: #666; margin-top: 10px;">Não há solicitações disponíveis com os gestores selecionados no momento.</p>
+        </div>
+        {% else %}
+        <table id="indicacoesTable">
+            <thead>
+                <tr>
+                    {% if is_master %}
+                    <th style="width: 40px; text-align: center;"><input type="checkbox" id="selectAllCheckbox"
+                            onclick="toggleAll(this)"></th>
+                    {% endif %}
+                    <th>Gestor Atual</th>
+                    <th>Gestor Novo</th>
+                    <th>Matr.</th>
+                    <th>Nome</th>
+                    <th>Setor de Destino</th>
+                    <th>Cargo Atual</th>
+                    <th>Cargo Proposto</th>
+                    <th>Mês/Ano Mov.</th>
+                    <th>Motivos das Alterações</th>
+                    <th>Status</th>
+
+                    <th style="width: 80px; text-align: center;">Histórico</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in indicacoes %}
+                <tr data-id="{{ item.id }}" class="data-row">
+                    {% if is_master %}
+                    <td style="text-align: center;"><input type="checkbox" class="row-checkbox" value="{{ item.id }}">
+                    </td>
+                    {% endif %}
+                    <td class="col-gestor-atual">{{ item.nome_gestor_origem }}</td>
+                    <td class="col-gestor-novo">{{ item.nome_gestor_destino }}</td>
+                    <td class="col-matricula">{{ item.matricula_empregado }}</td>
+                    <td class="col-nome">{{ item.nome_empregado }}</td>
+                    <td>{{ item.setor_destino }}</td>
+                    <td>{{ item.cargo_atual }}</td>
+                    <td>{{ item.cargo_proposto }}</td>
+                    <td class="col-mes">
+                        {% if is_master %}
+                        <input type="text" class="obs-input edit-mes" style="width: 100px; text-align: center; text-transform: uppercase;" value="{{ item.mes_ano }}">
+                        {% else %}
+                        {{ item.mes_ano }}
+                        {% endif %}
+                    </td>
+
+                    <!-- MASTER EDIT -->
+                    {% if is_master %}
+                    <td>
+                        <textarea class="obs-input edit-obs" rows="2">{{ item.observacao }}</textarea>
+                    </td>
+                    <td>
+                        <select class="status-select edit-status">
+                            <option value="Em análise" {% if item.status=='Em análise' %}selected{% endif %}>Em análise
+                            </option>
+                            <option value="Em Comitê" {% if item.status=='Em Comitê' %}selected{% endif %}>Em Comitê
+                            </option>
+                            <option value="Aprovado" {% if item.status=='Aprovado' %}selected{% endif %}>Aprovado
+                            </option>
+                            <option value="Reprovado" {% if item.status=='Reprovado' %}selected{% endif %}>Reprovado
+                            </option>
+                        </select>
+                    </td>
+
+                    <!-- SIMPLES VIEW -->
+                    {% else %}
+                    <td style="text-align: center;">
+                        {% if item.observacao and item.observacao.strip() != '' %}
+                        <div class="tooltip" data-obs="{{ item.observacao }}" onclick="abrirObservacao(this.getAttribute('data-obs'))">
+
+                            <!-- INFO TOOLTIP -->
+                            <span class="tooltip-icon">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="16" x2="12" y2="12" />
+                                    <circle cx="12" cy="8" r="1" />
+                                </svg>
+                            </span>
+
+                            <span class="tooltiptext">{{ item.observacao }}</span>
+                        </div>
+                        {% else %}
+                        <span style="color: #adb5bd; font-size: 12px; font-style: italic;">Sem obs.</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="status-badge" data-status="{{ item.status }}">{{ item.status }}</span>
+                    </td>
+
+                    {% endif %}
+                    <td style="text-align: center;">
+                        <button class="btn-historico" data-nome-emp="{{ item.nome_empregado }}" onclick="abrirHistorico({{ item.id }}, this.getAttribute('data-nome-emp'))" title="Ver Histórico">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div id="paginationControls"
+            style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px;">
+            <button class="btn" id="btnPrev" onclick="changePage(-1)">⬅️ Anterior</button>
+            <span id="pageInfo"
+                style="font-weight: 500; font-size: 14px; background: white; padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border-color);">Página
+                1 de 1</span>
+            <button class="btn" id="btnNext" onclick="changePage(1)">Próxima ➡️</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="toast" class="toast">✔️ Salvo com sucesso!</div>
+
+    <!-- Modal Observação / Motivo -->
+    <div id="modalObservacao" class="modal-historico" onclick="if(event.target===this) fecharObservacao()">
+        <div class="modal-historico-content">
+            <div class="modal-historico-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="1"/></svg>
+                    Motivos das Alterações
+                </h3>
+                <button class="modal-historico-close" onclick="fecharObservacao()">&times;</button>
+            </div>
+            <div id="obsConteudo" style="font-size: 14px; color: #444; line-height: 1.6; padding: 8px 0;"></div>
+        </div>
+    </div>
+
+    <!-- Modal Histórico / Audit Trail -->
+    <div id="modalHistorico" class="modal-historico" onclick="if(event.target===this) fecharHistorico()">
+        <div class="modal-historico-content">
+            <div class="modal-historico-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Trilha de Auditoria
+                </h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    {% if is_master %}
+                    <button class="btn-print-modal" onclick="window.print()" title="Imprimir Histórico" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 5px 8px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 12px; color: #1e3a5f;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        Imprimir
+                    </button>
+                    {% endif %}
+                    <button class="modal-historico-close" onclick="fecharHistorico()">&times;</button>
+                </div>
+            </div>
+            <p id="historicoSubtitle" style="font-size: 13px; color: #666; margin-bottom: 16px;"></p>
+            <div id="historicoTimeline" class="timeline"></div>
+        </div>
+    </div>
+
+    <div id="customAlertModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="customAlertTitle">⚠️ Atenção</h2>
+            </div>
+            <div class="modal-body">
+                <p id="customAlertMessage" style="white-space: pre-line; line-height: 1.6;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeCustomAlert()">Entendi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="customConfirmModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="customConfirmTitle">⚠️ Atenção</h2>
+            </div>
+            <div class="modal-body">
+                <p id="customConfirmMessage" style="white-space: pre-line; line-height: 1.6;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeCustomConfirm()">Cancelar</button>
+                <button class="btn btn-primary" id="confirmActionBtn">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Globais e Utilidades ---
+        let pendingConfirmAction = null;
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let filteredRows = [];
+
+        function showCustomAlert(title, message) {
+            const modal = document.getElementById('customAlertModal');
+            document.getElementById('customAlertTitle').textContent = title;
+            document.getElementById('customAlertMessage').textContent = message;
+            modal.classList.add('show');
+        }
+
+        function closeCustomAlert() {
+            document.getElementById('customAlertModal').classList.remove('show');
+        }
+
+        function showCustomConfirm(title, message, callback) {
+            const modal = document.getElementById('customConfirmModal');
+            document.getElementById('customConfirmTitle').textContent = title;
+            document.getElementById('customConfirmMessage').textContent = message;
+            pendingConfirmAction = callback;
+            modal.classList.add('show');
+        }
+
+        function closeCustomConfirm() {
+            document.getElementById('customConfirmModal').classList.remove('show');
+            pendingConfirmAction = null;
+        }
+
+        // --- Modais de Histórico e Observação ---
+        function abrirHistorico(id, nomeEmpregado) {
+            document.getElementById('historicoSubtitle').textContent = 'Empregado: ' + nomeEmpregado;
+            const timeline = document.getElementById('historicoTimeline');
+            timeline.innerHTML = '<div class="timeline-empty">Carregando...</div>';
+            document.getElementById('modalHistorico').classList.add('active');
+
+            fetch('/api/auditoria/' + id)
+                .then(r => r.json())
+                .then(logs => {
+                    if (logs.length === 0) {
+                        timeline.innerHTML = '<div class="timeline-empty">Nenhum registro de auditoria encontrado.</div>';
+                        return;
+                    }
+                    timeline.innerHTML = logs.map(log => {
+                        const dt = new Date(log.data_hora);
+                        const dataStr = dt.toLocaleDateString('pt-BR');
+                        const horaStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        return `
+                            <div class="timeline-item">
+                                <div class="timeline-date">📅 ${dataStr} às ${horaStr}</div>
+                                <div class="timeline-user">${log.nome || 'Sistema'}</div>
+                                <div class="timeline-acao">${log.acao}</div>
+                            </div>
+                        `;
+                    }).join('');
+                })
+                .catch(() => {
+                    timeline.innerHTML = '<div class="timeline-empty">Erro ao carregar histórico.</div>';
+                });
+        }
+
+        function fecharHistorico() {
+            document.getElementById('modalHistorico').classList.remove('active');
+        }
+
+        function abrirObservacao(texto) {
+            document.getElementById('obsConteudo').textContent = texto;
+            document.getElementById('modalObservacao').classList.add('active');
+        }
+
+        function fecharObservacao() {
+            document.getElementById('modalObservacao').classList.remove('active');
+        }
+
+        // --- Filtros e Paginação ---
+        function applyFiltersAndPagination() {
+            const filterAtual = document.getElementById('filterGestorAtual').value.toLowerCase();
+            const filterNovo = document.getElementById('filterGestorNovo').value.toLowerCase();
+            const filterMatr = document.getElementById('filterMatricula').value.toLowerCase();
+            const filterMes = document.getElementById('filterMesAno').value.toLowerCase();
+
+            const allRows = document.querySelectorAll('.data-row');
+            filteredRows = [];
+
+            allRows.forEach(row => {
+                const atual = row.querySelector('.col-gestor-atual').textContent.toLowerCase();
+                const novo = row.querySelector('.col-gestor-novo').textContent.toLowerCase();
+                const matr = row.querySelector('.col-matricula').textContent.toLowerCase();
+                const mes = row.querySelector('.col-mes').textContent.toLowerCase();
+
+                if (atual.includes(filterAtual) && novo.includes(filterNovo) && 
+                    matr.includes(filterMatr) && mes.includes(filterMes)) {
+                    filteredRows.push(row);
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const cbMaster = document.getElementById('selectAllCheckbox');
+            if (cbMaster) cbMaster.checked = false;
+
+            currentPage = 1;
+            renderPagination();
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('paginationControls');
+            if (!container) return;
+            
+            if (filteredRows.length === 0) {
+                container.style.display = 'none';
+                return;
+            } else {
+                container.style.display = 'flex';
+            }
+
+            const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
+            document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages}`;
+            document.getElementById('btnPrev').disabled = (currentPage === 1);
+            document.getElementById('btnNext').disabled = (currentPage === totalPages);
+
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+
+            filteredRows.forEach((row, index) => {
+                row.style.display = (index >= startIndex && index < endIndex) ? 'table-row' : 'none';
+            });
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            renderPagination();
+        }
+
+        function toggleAll(source) {
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            checkboxes.forEach(cb => {
+                if (cb.closest('tr').style.display === 'table-row') {
+                    cb.checked = source.checked;
+                }
+            });
+        }
+
+        // --- Ações Master ---
+        function salvarAlteracoes() {
+            const rows = document.querySelectorAll('#indicacoesTable tbody tr');
+            const updates = [];
+
+            rows.forEach(row => {
+                const id = row.getAttribute('data-id');
+                const obsEl = row.querySelector('.edit-obs');
+                const statusEl = row.querySelector('.edit-status');
+                const mesEl = row.querySelector('.edit-mes');
+                if (obsEl && statusEl) {
+                    const updateData = { id: id, observacao: obsEl.value, status: statusEl.value };
+                    if (mesEl) updateData.mes_ano = mesEl.value;
+                    updates.push(updateData);
+                }
+            });
+
+            if (updates.length === 0) return;
+
+            fetch('/api/atualizar_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ updates: updates })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const toast = document.getElementById('toast');
+                    toast.style.display = 'block';
+                    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+                } else {
+                    showCustomAlert('❌ Erro', 'Erro ao salvar: ' + (data.error || 'Desconhecido'));
+                }
+            })
+            .catch(err => showCustomAlert('❌ Erro', 'Erro de rede: ' + err));
+        }
+
+        function excluirSelecionados() {
+            const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+            const idsParaExcluir = Array.from(checkboxes).map(cb => cb.value);
+
+            if (idsParaExcluir.length === 0) {
+                showCustomAlert('⚠️ ATENÇÃO', 'Selecione as indicações para excluir.');
+                return;
+            }
+
+            showCustomConfirm('⚠️ Confirmar Exclusão', `Excluir permanentemente ${idsParaExcluir.length} indicações?`, () => {
+                fetch('/api/excluir_indicacoes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: idsParaExcluir })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showCustomAlert('✅ Sucesso', 'Excluído com sucesso!');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showCustomAlert('❌ Erro', 'Erro ao excluir: ' + data.error);
+                    }
+                })
+                .catch(err => showCustomAlert('❌ Erro', 'Erro de rede: ' + err));
+            });
+        }
+
+
+
+        // --- Dark Mode ---
+        const darkModeStyles = `
+            body.dark-mode { background-color: #121212 !important; color: #e0e0e0 !important; }
+            body.dark-mode .navbar { background-color: #0d1b2a !important; }
+            body.dark-mode .container, body.dark-mode .filters-container, body.dark-mode table,
+            body.dark-mode .modal-content, body.dark-mode .modal-historico-content, body.dark-mode .empty-state {
+                background-color: #1e1e1e !important; color: #e0e0e0 !important; border-color: #333 !important;
+            }
+            body.dark-mode .empty-state h3, body.dark-mode .empty-state p { color: #e0e0e0 !important; }
+            body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+                background-color: #2d2d2d !important; color: #ffffff !important; border: 1px solid #444 !important;
+            }
+            body.dark-mode th { background-color: #1a2a3a !important; }
+            body.dark-mode tr:nth-child(even) { background-color: #1a1a1a !important; }
+            body.dark-mode tr:hover { background-color: #333 !important; }
+            body.dark-mode .filters-container h3, body.dark-mode .header-bar h2 { color: #8ab4f8 !important; }
+            body.dark-mode .header-bar h2 svg { stroke: #8ab4f8 !important; }
+        `;
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = darkModeStyles;
+        document.head.appendChild(styleSheet);
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const moonSVG = '<svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>';
+            const sunSVG = '<svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+            document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+                btn.innerHTML = isDark ? sunSVG + ' Modo Claro' : moonSVG + ' Modo Escuro';
+            });
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+            updateThemeIcon(document.body.classList.contains('dark-mode'));
+            
+            const confirmBtn = document.getElementById('confirmActionBtn');
+            if (confirmBtn) {
+                confirmBtn.onclick = () => {
+                    if (pendingConfirmAction) pendingConfirmAction();
+                    closeCustomConfirm();
+                };
+            }
+            
+            if (document.getElementById('filterGestorAtual')) {
+                applyFiltersAndPagination();
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='notificacoes.js') }}"></script>
+</body>
+</html>
