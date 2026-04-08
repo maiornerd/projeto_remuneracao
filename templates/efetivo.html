@@ -49,6 +49,42 @@
         
         .drilldown-hint { font-size: 11px; color: #666; font-weight: normal; font-style: italic; }
 
+        /* Multi-select dropdown */
+        .multi-select-wrapper { position: relative; min-width: 150px; }
+        .multi-select-trigger {
+            padding: 5px 28px 5px 8px; border: 1px solid var(--border-color); border-radius: 4px;
+            font-size: 12px; background: white; cursor: pointer; min-height: 28px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            display: flex; align-items: center;
+            appearance: none; -webkit-appearance: none;
+        }
+        .multi-select-trigger::after {
+            content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            border: 5px solid transparent; border-top-color: #666; pointer-events: none;
+        }
+        .multi-select-dropdown {
+            display: none; position: absolute; top: 100%; left: 0; right: 0;
+            background: white; border: 1px solid var(--border-color); border-radius: 0 0 4px 4px;
+            max-height: 260px; overflow-y: auto; z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 220px;
+        }
+        .multi-select-dropdown.open { display: block; }
+        .multi-select-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px; cursor: pointer; font-size: 12px;
+            transition: background 0.15s;
+        }
+        .multi-select-item:hover { background: #e9ecef; }
+        .multi-select-item input[type="checkbox"] {
+            accent-color: var(--secondary-blue); width: 14px; height: 14px; cursor: pointer;
+        }
+        .multi-select-item.select-all { border-bottom: 1px solid var(--border-color); font-weight: 600; color: var(--primary-blue); }
+        .ms-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--secondary-blue); color: white; border-radius: 10px;
+            font-size: 10px; min-width: 18px; height: 18px; padding: 0 5px; margin-right: 4px;
+        }
+
     </style>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -115,8 +151,10 @@
             </div>
             <div class="filter-group">
                 <label>Nome da Função</label>
-                <select id="flt_funcao" class="filter-select" onchange="runFilters()">
-                </select>
+                <div class="multi-select-wrapper" id="funcaoMultiSelect">
+                    <div class="multi-select-trigger" onclick="toggleFuncaoDropdown()">TODOS</div>
+                    <div class="multi-select-dropdown" id="funcaoDropdown"></div>
+                </div>
             </div>
         </div>
 
@@ -176,7 +214,7 @@
                 if(document.getElementById('flt_gestores')) populateSelect('flt_gestores', data.gestores, '');
                 populateSelect('flt_setor', data.setores, '');
                 populateSelect('flt_macro', data.macro_areas, '');
-                populateSelect('flt_funcao', data.funcoes, '');
+                updateFuncaoMultiSelect(data.funcoes || []);
                 carregarDados();
             });
         }
@@ -200,13 +238,71 @@
             if(!valueStillExists) el.value = '';
         }
 
+        // --- Multi-select Funcao ---
+        let selectedFuncoes = [];
+
+        function toggleFuncaoDropdown() {
+            document.getElementById('funcaoDropdown').classList.toggle('open');
+        }
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('funcaoMultiSelect');
+            if (wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('funcaoDropdown').classList.remove('open');
+            }
+        });
+
+        function updateFuncaoMultiSelect(funcoesList) {
+            const dropdown = document.getElementById('funcaoDropdown');
+            if (!dropdown) return;
+
+            const sorted = Array.from(funcoesList).filter(Boolean).sort();
+            selectedFuncoes = selectedFuncoes.filter(f => sorted.includes(f));
+
+            let html = `<label class="multi-select-item select-all">
+                <input type="checkbox" id="funcaoSelectAll" onchange="toggleAllFuncoes(this.checked)" ${selectedFuncoes.length === 0 ? 'checked' : ''}> TODOS
+            </label>`;
+            sorted.forEach(v => {
+                const chk = selectedFuncoes.includes(v) ? 'checked' : '';
+                html += `<label class="multi-select-item">
+                    <input type="checkbox" value="${v}" onchange="onFuncaoCheck(this)" ${chk}> ${v}
+                </label>`;
+            });
+            dropdown.innerHTML = html;
+            updateFuncaoTrigger();
+        }
+
+        function onFuncaoCheck(cb) {
+            if (cb.checked) { if (!selectedFuncoes.includes(cb.value)) selectedFuncoes.push(cb.value); }
+            else { selectedFuncoes = selectedFuncoes.filter(f => f !== cb.value); }
+            const allCb = document.getElementById('funcaoSelectAll');
+            if (allCb) allCb.checked = (selectedFuncoes.length === 0);
+            updateFuncaoTrigger();
+            runFilters();
+        }
+
+        function toggleAllFuncoes(checked) {
+            if (checked) {
+                selectedFuncoes = [];
+                document.querySelectorAll('#funcaoDropdown input[type=checkbox]:not(#funcaoSelectAll)').forEach(cb => cb.checked = false);
+            }
+            updateFuncaoTrigger();
+            runFilters();
+        }
+
+        function updateFuncaoTrigger() {
+            const trigger = document.querySelector('#funcaoMultiSelect .multi-select-trigger');
+            if (!trigger) return;
+            if (selectedFuncoes.length === 0) trigger.innerHTML = 'TODOS';
+            else if (selectedFuncoes.length === 1) trigger.innerHTML = selectedFuncoes[0];
+            else trigger.innerHTML = `<span class="ms-badge">${selectedFuncoes.length}</span> funções selecionadas`;
+        }
+
         // 1.5 CASCATA DE FILTROS NA TELA
         function runFilters() {
             const fColigada = document.getElementById('flt_coligadas') ? document.getElementById('flt_coligadas').value : '';
             const fGest = document.getElementById('flt_gestores') ? document.getElementById('flt_gestores').value : '';
             const fSetor = document.getElementById('flt_setor').value;
             const fMacro = document.getElementById('flt_macro').value;
-            const fFunc = document.getElementById('flt_funcao').value;
 
             const getMatchingCombos = (checkColigada, checkGest, checkSetor, checkMacro, checkFunc) => {
                 return allCombos.filter(row => {
@@ -214,7 +310,7 @@
                     const matchGest = !checkGest || !fGest || row.gestor === fGest;
                     const matchSetor = !checkSetor || !fSetor || row.setor === fSetor;
                     const matchMacro = !checkMacro || !fMacro || row.macro_area === fMacro;
-                    const matchFunc = !checkFunc || !fFunc || row.funcao === fFunc;
+                    const matchFunc = !checkFunc || selectedFuncoes.length === 0 || selectedFuncoes.includes(row.funcao);
                     return matchCol && matchGest && matchSetor && matchMacro && matchFunc;
                 });
             };
@@ -225,15 +321,13 @@
                 return Array.from(unique);
             };
 
-            // Atualiza as opções dependendo das instâncias superiores na hierarquia visual
             if (document.getElementById('flt_gestores')) {
                 populateSelect('flt_gestores', extractUnique(getMatchingCombos(true, false, false, false, false), 'gestor'), fGest);
             }
             populateSelect('flt_setor', extractUnique(getMatchingCombos(true, true, false, false, false), 'setor'), fSetor);
             populateSelect('flt_macro', extractUnique(getMatchingCombos(true, true, true, false, false), 'macro_area'), fMacro);
-            populateSelect('flt_funcao', extractUnique(getMatchingCombos(true, true, true, true, false), 'funcao'), fFunc);
+            updateFuncaoMultiSelect(extractUnique(getMatchingCombos(true, true, true, true, false), 'funcao'));
 
-            // Fetch final data to render table
             carregarDados();
         }
 
@@ -249,7 +343,7 @@
                 coligadas: getSelected('flt_coligadas'),
                 setores: getSelected('flt_setor'),
                 macro_areas: getSelected('flt_macro'),
-                funcoes: getSelected('flt_funcao')
+                funcoes: selectedFuncoes.length > 0 ? selectedFuncoes : []
             };
             if(document.getElementById('flt_gestores')){
                 payload.gestores = getSelected('flt_gestores');
@@ -349,7 +443,7 @@
                 coligadas: getSelected('flt_coligadas'),
                 setores: getSelected('flt_setor'),
                 macro_areas: getSelected('flt_macro'),
-                funcoes: getSelected('flt_funcao')
+                funcoes: selectedFuncoes.length > 0 ? selectedFuncoes : []
             };
             if(document.getElementById('flt_gestores')){
                 payload.gestores = getSelected('flt_gestores');
@@ -439,6 +533,13 @@
             body.dark-mode thead th { background-color: #1a2a3a !important; }
             body.dark-mode tbody tr:hover { background-color: #333 !important; }
             body.dark-mode .filter-group label { color: #e0e0e0 !important; }
+            /* Multi-select dark mode */
+            body.dark-mode .multi-select-trigger { background-color: #2d2d2d !important; color: #e0e0e0 !important; border-color: #444 !important; }
+            body.dark-mode .multi-select-trigger::after { border-top-color: #aaa !important; }
+            body.dark-mode .multi-select-dropdown { background-color: #2d2d2d !important; border-color: #444 !important; }
+            body.dark-mode .multi-select-item { color: #e0e0e0 !important; }
+            body.dark-mode .multi-select-item:hover { background: #3a3a3a !important; }
+            body.dark-mode .multi-select-item.select-all { border-color: #555 !important; color: #8ab4f8 !important; }
         `;
         document.head.appendChild(dm);
 

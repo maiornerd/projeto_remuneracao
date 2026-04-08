@@ -60,20 +60,20 @@ def init_db_schema():
             gestor_origem_mat TEXT, nome_gestor_origem TEXT, gestor_destino_mat TEXT, nome_gestor_destino TEXT,
             matricula_empregado TEXT, nome_empregado TEXT, setor_destino TEXT, cargo_atual TEXT, cargo_proposto TEXT,
             mes_ano TEXT, observacao TEXT DEFAULT '', status TEXT DEFAULT 'Em análise', setor_origem TEXT,
-            dados_completos TEXT, data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
+            dados_completos TEXT, data_criacao DATETIME DEFAULT (datetime('now', 'localtime'))
         )
     ''')
 
     conn.execute('''
         CREATE TABLE IF NOT EXISTS notificacoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT, matricula TEXT, mensagem TEXT, lida BOOLEAN DEFAULT 0,
-            data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
+            data_criacao DATETIME DEFAULT (datetime('now', 'localtime'))
         )
     ''')
     conn.execute('''
         CREATE TABLE IF NOT EXISTS auditoria (
             id INTEGER PRIMARY KEY AUTOINCREMENT, indicacao_id INTEGER, matricula TEXT, nome TEXT, acao TEXT,
-            data_hora DATETIME DEFAULT CURRENT_TIMESTAMP
+            data_hora DATETIME DEFAULT (datetime('now', 'localtime'))
         )
     ''')
     
@@ -86,7 +86,7 @@ def init_db_schema():
             setor TEXT,
             funcao TEXT,
             quantidade INTEGER,
-            data_importacao DATETIME DEFAULT CURRENT_TIMESTAMP
+            data_importacao DATETIME DEFAULT (datetime('now', 'localtime'))
         )
     ''')
     
@@ -128,10 +128,10 @@ def atualizar_notificacao_master(conn, triggered_by_master=False):
         if pendentes > 0:
             if existe:
                 nova_lida = existe['lida'] if triggered_by_master else 0
-                conn.execute("UPDATE notificacoes SET mensagem = ?, lida = ?, data_criacao = CURRENT_TIMESTAMP WHERE id = ?", (msg, nova_lida, existe['id']))
+                conn.execute("UPDATE notificacoes SET mensagem = ?, lida = ?, data_criacao = datetime('now', 'localtime') WHERE id = ?", (msg, nova_lida, existe['id']))
             else:
                 lida = 1 if triggered_by_master else 0
-                conn.execute("INSERT INTO notificacoes (matricula, mensagem, lida) VALUES (?, ?, ?)", (m, msg, lida))
+                conn.execute("INSERT INTO notificacoes (matricula, mensagem, lida, data_criacao) VALUES (?, ?, ?, datetime('now', 'localtime'))", (m, msg, lida))
         else:
                 conn.execute("DELETE FROM notificacoes WHERE id = ?", (existe['id'],))
 
@@ -1128,8 +1128,8 @@ def salvar_indicacoes():
             json.dumps(row, ensure_ascii=False)
         ))
         novo_id = cursor.lastrowid
-        conn.execute('INSERT INTO auditoria (indicacao_id, matricula, nome, acao) VALUES (?, ?, ?, ?)',
-                     (novo_id, matricula_origem, nome_origem, f'Criou a indicação do empregado {nome_emp} para {cargo_prop}'))
+        conn.execute("INSERT INTO auditoria (indicacao_id, matricula, nome, acao, data_hora) VALUES (?, ?, ?, ?, datetime('now', 'localtime'))",
+                     (novo_id, session['matricula'], session.get('nome', ''), f'Criou a indicação do empregado {nome_emp} para {cargo_prop}'))
         
     atualizar_notificacao_master(conn, triggered_by_master=False)
     conn.commit()
@@ -1157,12 +1157,24 @@ def atualizar_status():
             if item:
                 status_antigo = item['status_antigo']
                 mes_antigo = item['mes_antigo']
-                if status in ['Aprovado', 'Reprovado']:
-                    msg = f"A indicação de {item['nome_empregado']} para {item['cargo_proposto']} foi {status.upper()}."
+                if status_antigo != status:
+                    msg = f"A indicação de {item['nome_empregado']} para {item['cargo_proposto']} teve status alterado de \"{status_antigo}\" para \"{status}\"."
                     gestores = set([item['gestor_origem_mat'], item['gestor_destino_mat']])
+                    # Collect all matriculas to notify: gestores + users attached to those gestores
+                    destinatarios = set()
                     for gestor in gestores:
                         if gestor:
-                            conn.execute("INSERT INTO notificacoes (matricula, mensagem) VALUES (?, ?)", (gestor, msg))
+                            destinatarios.add(gestor)
+                            # Find Simples/Intermediário users linked to this gestor
+                            usuarios_vinculados = conn.execute(
+                                "SELECT matricula FROM usuarios WHERE gestor_matricula = ?", (gestor,)
+                            ).fetchall()
+                            for u in usuarios_vinculados:
+                                destinatarios.add(u['matricula'])
+                    # Don't notify the master who made the change
+                    destinatarios.discard(session['matricula'])
+                    for dest in destinatarios:
+                        conn.execute("INSERT INTO notificacoes (matricula, mensagem) VALUES (?, ?)", (dest, msg))
                 
                 acao_parts = []
                 if status_antigo != status:
@@ -1172,8 +1184,15 @@ def atualizar_status():
                 if obs:
                     acao_parts.append(f'Motivo: {obs}')
                 acao_text = '. '.join(acao_parts) if acao_parts else f'Atualizou para "{status}"'
-                conn.execute('INSERT INTO auditoria (indicacao_id, matricula, nome, acao) VALUES (?, ?, ?, ?)',
+                conn.execute("INSERT INTO auditoria (indicacao_id, matricula, nome, acao, data_hora) VALUES (?, ?, ?, ?, datetime('now', 'localtime'))",
                              (item_id, session['matricula'], session.get('nome', ''), acao_text))
+                
+                # Also notify about status change manually to ensure local time
+                if status_antigo != status:
+                    msg = f"A indicação de {item['nome_empregado']} para {item['cargo_proposto']} teve status alterado de \"{status_antigo}\" para \"{status}\"."
+                    # Re-run notification logic but specifying the time
+                    for dest in destinatarios:
+                        conn.execute("INSERT INTO notificacoes (matricula, mensagem, data_criacao) VALUES (?, ?, datetime('now', 'localtime'))", (dest, msg))
                              
             if mes_ano:
                 conn.execute('UPDATE indicacoes_item SET status = ?, observacao = ?, mes_ano = ? WHERE id = ?',

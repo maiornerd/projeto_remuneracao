@@ -725,16 +725,16 @@
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script>
-        (function() {
+        (function () {
             const csrfToken = "{{ csrf_token() }}";
             const originalFetch = window.fetch;
-            window.fetch = function() {
+            window.fetch = function () {
                 let [resource, config] = arguments;
-                if(config === undefined) {
+                if (config === undefined) {
                     config = {};
                 }
-                if(config.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method.toUpperCase())) {
-                    if(config.headers === undefined) {
+                if (config.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method.toUpperCase())) {
+                    if (config.headers === undefined) {
                         config.headers = {};
                     }
                     config.headers['X-CSRFToken'] = csrfToken;
@@ -762,8 +762,13 @@
             </a>
 
             <h1>Tabela de Indicações para o Comitê</h1>
-            
-            <button class="theme-toggle-btn" onclick="toggleDarkMode()" style="position: absolute; top: 20px; right: 140px; background: transparent; border: 1px solid white; color: white; padding: 8px 15px; font-size: 14px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><svg class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg> Modo Escuro</button>
+
+            <button class="theme-toggle-btn" onclick="toggleDarkMode()"
+                style="position: absolute; top: 20px; right: 140px; background: transparent; border: 1px solid white; color: white; padding: 8px 15px; font-size: 14px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"><svg
+                    class="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
+                </svg> Modo Escuro</button>
 
             <a href="/logout" class="btn btn-danger"
                 style="position: absolute; top: 20px; right: 30px; text-decoration: none; padding: 8px 15px; font-size: 14px;">
@@ -851,8 +856,8 @@
                 </svg>
                 Exportar Arquivo
             </button>
-            <button class="btn btn-primary" style="background-color: #007bff; border-color: #007bff;" onclick="finalizarEEnviar()"
-                title="Concluir processo: salvar, gerar arquivos e preparar e-mail">
+            <button class="btn btn-primary" style="background-color: #007bff; border-color: #007bff;"
+                onclick="finalizarEEnviar()" title="Concluir processo: salvar, gerar arquivos e preparar e-mail">
                 <svg viewBox="0 0 24 24">
                     <path d="M22 2L11 13" />
                     <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -995,8 +1000,7 @@
         </div>
 
         <div class="footer">
-            Tabela criada e desenvolvida por Alan Silva com apoio de Gustavo Hülse e com a validação de Cristiane
-            Covatti. <br>
+            Sistema criado e desenvolvido por Alan Silva. <br>
             © 2026 DeMillus S.A. Todos os direitos reservados.
         </div>
 
@@ -2764,7 +2768,7 @@
                 doc.setPage(i);
                 doc.setFontSize(8);
                 doc.setTextColor(150);
-                doc.text('Tabela criada e desenvolvida por Alan Silva com apoio de Gustavo Hülse e com a validação de Cristiane Covatti.', 148.5, 205, { align: 'center' });
+                doc.text('Sistema criado e desenvolvido por Alan Silva', 148.5, 205, { align: 'center' });
             }
 
 
@@ -2889,208 +2893,208 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
 
-                doc.setFontSize(16);
-                doc.setTextColor(30, 58, 95);
-                doc.text("Tabela de Indicações para o Comitê", 148.5, 15, { align: 'center' });
-                doc.setFontSize(9);
-                doc.setTextColor(50, 50, 50);
-                doc.text(`Data: ${today} | Responsável: ${responsavel} | Empresa: ${empresaText}`, 148.5, 22, { align: 'center' });
-                doc.setDrawColor(30, 58, 95);
-                doc.setLineWidth(0.6);
-                doc.line(5, 25, 292, 25);
+            doc.setFontSize(16);
+            doc.setTextColor(30, 58, 95);
+            doc.text("Tabela de Indicações para o Comitê", 148.5, 15, { align: 'center' });
+            doc.setFontSize(9);
+            doc.setTextColor(50, 50, 50);
+            doc.text(`Data: ${today} | Responsável: ${responsavel} | Empresa: ${empresaText}`, 148.5, 22, { align: 'center' });
+            doc.setDrawColor(30, 58, 95);
+            doc.setLineWidth(0.6);
+            doc.line(5, 25, 292, 25);
 
-                const headers = [['Mat.', 'Nome', 'Setor Orig.', 'Cargo Atual', 'Cód. Set. Dest.',
-                    'Setor Dest.', 'Cargo Prop.', 'Lider?', 'R&S?', 'Dt Aval.',
-                    'Trein?', 'Carta?', 'Dt Iníc.', 'Subst?', 'Mat. Sub.',
-                    'Nome Sub.', 'Motivo', 'Dt Mot.']];
+            const headers = [['Mat.', 'Nome', 'Setor Orig.', 'Cargo Atual', 'Cód. Set. Dest.',
+                'Setor Dest.', 'Cargo Prop.', 'Lider?', 'R&S?', 'Dt Aval.',
+                'Trein?', 'Carta?', 'Dt Iníc.', 'Subst?', 'Mat. Sub.',
+                'Nome Sub.', 'Motivo', 'Dt Mot.']];
 
-                const pdfData = [];
-                document.querySelectorAll('#tableBody tr').forEach(row => {
+            const pdfData = [];
+            document.querySelectorAll('#tableBody tr').forEach(row => {
+                const matricula = row.querySelector('[data-field="matricula"]').value;
+                if (!matricula) return;
+                const getVal = (selector) => {
+                    const el = row.querySelector(selector);
+                    if (el.type === 'date' && el.disabled) return '';
+                    if (el.type === 'date' && el.value) return convertDateForDisplay(el.value);
+                    return el.value || '';
+                };
+                const matriculaCompleta = getMatriculaComEmpresa(matricula);
+                const ehSubst = row.querySelector('[data-field="ehSubstituicao"]').value;
+                pdfData.push([
+                    matriculaCompleta, getVal('[data-field="nome"]'), getVal('[data-field="setorOrigem"]'),
+                    getVal('[data-field="cargoAtual"]'), getVal('[data-field="codSetorDestino"]'),
+                    getVal('[data-field="setorDestino"]'), getVal('[data-field="cargoProposto"]'),
+                    getVal('[data-field="cargoLideranca"]'), getVal('[data-field="avaliacaoComportamental"]'),
+                    getVal('[data-field="dataAvaliacaoComp"]'), getVal('[data-field="emTreinamento"]'),
+                    getVal('[data-field="possuiCarta"]'), getVal('[data-field="dataInicio"]'),
+                    ehSubst,
+                    ehSubst === 'SIM' ? getMatriculaComEmpresa(row.querySelector('[data-field="matriculaSubstituto"]').value) : '',
+                    getVal('[data-field="nomeSubstituto"]'), getVal('[data-field="motivoSubstituicao"]'),
+                    getVal('[data-field="dataDesligamento"]')
+                ]);
+            });
+
+            doc.autoTable({
+                head: headers, body: pdfData, startY: 30, theme: 'grid',
+                styles: { fontSize: 6, cellPadding: 1, overflow: 'linebreak', halign: 'left' },
+                headStyles: { fillColor: [30, 58, 95], textColor: 255, fontSize: 6, fontStyle: 'bold', halign: 'center' },
+                columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 25 }, 7: { halign: 'center' }, 8: { halign: 'center' }, 10: { halign: 'center' }, 11: { halign: 'center' }, 13: { halign: 'center' } },
+                margin: { top: 30, left: 5, right: 5, bottom: 10 }
+            });
+
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text('Sistema criado e desenvolvido por Alan Silva.', 148.5, 205, { align: 'center' });
+            }
+
+
+            const pdfBlob = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            const pdfLink = document.createElement('a');
+            pdfLink.href = pdfUrl;
+            pdfLink.download = `Indicacoes_Promocao_${date}.pdf`;
+            document.body.appendChild(pdfLink);
+            pdfLink.click();
+            setTimeout(() => {
+                document.body.removeChild(pdfLink);
+                URL.revokeObjectURL(pdfUrl);
+            }, 100);
+
+            // --- 4. GERA E FAZ DOWNLOAD DO CSV ---
+            const csvHeaders = [
+                'Matrícula', 'Nome Completo', 'Setor Atual', 'Cargo Atual', 'Cód. Setor Destino',
+                'Setor de Destino', 'Cargo Proposto', 'Cargo de Liderança?', 'R&S fez Avaliação?',
+                'Data Avaliação Comportamental', 'Em Treinamento?', 'Possui Carta?',
+                'Data Início Treinamento', 'É Substituição?', 'Matrícula Substituído', 'Nome Substituído',
+                'Motivo Substituição', 'Data Motivo Substituição'
+            ];
+
+            const empresaSelectEl = document.getElementById('empresa');
+            const empresaTextCSV = empresaSelectEl.options[empresaSelectEl.selectedIndex].text;
+            let csv = `Responsável: ${responsavel}\nEmpresa: ${empresaTextCSV}\n\n`;
+            csv += csvHeaders.join(';') + '\n';
+
+            document.querySelectorAll('#tableBody tr').forEach(row => {
+                const matricula = row.querySelector('[data-field="matricula"]').value;
+                if (!matricula) return;
+
+                const matriculaCompleta = getMatriculaComEmpresa(matricula);
+                const ehSubstituicao = row.querySelector('[data-field="ehSubstituicao"]').value;
+                const matriculaSubst = row.querySelector('[data-field="matriculaSubstituto"]').value;
+                const matriculaSubstCompleta = ehSubstituicao === 'SIM' && matriculaSubst ? getMatriculaComEmpresa(matriculaSubst) : matriculaSubst;
+
+                const dataAvalInput = row.querySelector('[data-field="dataAvaliacaoComp"]');
+                let dataAval = getDateFieldValue(dataAvalInput);
+                if (dataAval && dataAval !== 'N/A') dataAval = convertDateForDisplay(dataAval);
+
+                const dataInicioInput = row.querySelector('[data-field="dataInicio"]');
+                let dataInicio = getDateFieldValue(dataInicioInput);
+                if (dataInicio && dataInicio !== 'N/A') dataInicio = convertDateForDisplay(dataInicio);
+
+                const dataDesligInput = row.querySelector('[data-field="dataDesligamento"]');
+                let dataDeslig = getDateFieldValue(dataDesligInput);
+                if (dataDeslig && dataDeslig !== 'N/A') dataDeslig = convertDateForDisplay(dataDeslig);
+
+                const values = [
+                    matriculaCompleta,
+                    row.querySelector('[data-field="nome"]').value,
+                    row.querySelector('[data-field="setorOrigem"]').value,
+                    row.querySelector('[data-field="cargoAtual"]').value,
+                    row.querySelector('[data-field="codSetorDestino"]').value,
+                    row.querySelector('[data-field="setorDestino"]').value,
+                    row.querySelector('[data-field="cargoProposto"]').value,
+                    row.querySelector('[data-field="cargoLideranca"]').value,
+                    row.querySelector('[data-field="avaliacaoComportamental"]').value,
+                    dataAval,
+                    row.querySelector('[data-field="emTreinamento"]').value,
+                    row.querySelector('[data-field="possuiCarta"]').value,
+                    dataInicio,
+                    ehSubstituicao,
+                    matriculaSubstCompleta,
+                    row.querySelector('[data-field="nomeSubstituto"]').value,
+                    row.querySelector('[data-field="motivoSubstituicao"]').value,
+                    dataDeslig
+                ].map(v => `"${(v || '').replace(/"/g, '""')}"`);
+
+                csv += values.join(';') + '\n';
+            });
+
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const csvLink = document.createElement('a');
+            const csvUrl = URL.createObjectURL(blob);
+            csvLink.setAttribute('href', csvUrl);
+            csvLink.setAttribute('download', `Indicacoes_Promocao_${date}.csv`);
+            csvLink.style.visibility = 'hidden';
+            document.body.appendChild(csvLink);
+            csvLink.click();
+            setTimeout(() => {
+                document.body.removeChild(csvLink);
+                URL.revokeObjectURL(csvUrl);
+            }, 100);
+
+            setTimeout(() => {
+                // --- 5. MONTA E ABRE O THUNDERBIRD VIA MAILTO ---
+                // Cria a data atual e adiciona 1 mês para obter o mês seguinte
+                const dataProximoMes = new Date();
+                dataProximoMes.setMonth(dataProximoMes.getMonth() + 1);
+
+                // Formata a data do mês seguinte para "Mês AAAA" em português
+                const mesAno = dataProximoMes.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+                const assunto = `Indicações para o Comitê - ${mesAno}`;
+
+                const corpo =
+                    `Ao Responsável de Remuneração e Performance,\n\n` +
+                    `Estamos enviando em anexo a Tabela de Indicações para o Comitê com as propostas de promoções/transferências referentes ao período de ${mesAno}.\n\n` +
+                    `Responsável: ${responsavel}\n` +
+                    `Empresa: ${empresaText}\n` +
+                    `Total de indicações: ${totalIndicacoes}\n\n` +
+                    `Arquivos em anexo:\n` +
+                    `✅ Indicacoes_Promocao_${date}.pdf (visualização)\n` +
+                    `✅ Indicacoes_Promocao_${date}.csv (processamento)\n\n` +
+                    `Ficamos à disposição para esclarecimentos.\n\n` +
+                    `Atenciosamente,\n${responsavel}`;
+
+                let mailtoLink = `mailto:?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+
+                // Abre o Thunderbird (ou cliente de e-mail padrão) com o assunto e corpo pré-preenchidos
+                window.location.href = mailtoLink;
+
+                // --- 6. ACESSO AO BANCO DE DADOS E AVISO FINAL ---
+                const responsavelDestinoEl = document.getElementById('responsavel_destino');
+                const responsavelDestino = responsavelDestinoEl && responsavelDestinoEl.selectedIndex >= 0 ? responsavelDestinoEl.options[responsavelDestinoEl.selectedIndex].text : '';
+
+                const rowsData = [];
+                const rows = document.querySelectorAll('#tableBody tr');
+                rows.forEach(row => {
                     const matricula = row.querySelector('[data-field="matricula"]').value;
                     if (!matricula) return;
-                    const getVal = (selector) => {
-                        const el = row.querySelector(selector);
-                        if (el.type === 'date' && el.disabled) return '';
-                        if (el.type === 'date' && el.value) return convertDateForDisplay(el.value);
-                        return el.value || '';
+
+                    const rowData = {
+                        matriculaCompleta: getMatriculaComEmpresa(matricula),
+                        nome: row.querySelector('[data-field="nome"]').value,
+                        setorOrigem: row.querySelector('[data-field="setorOrigem"]').value,
+                        setorDestino: row.querySelector('[data-field="setorDestino"]').value,
+                        cargoAtual: row.querySelector('[data-field="cargoAtual"]').value,
+                        cargoProposto: row.querySelector('[data-field="cargoProposto"]').value
                     };
-                    const matriculaCompleta = getMatriculaComEmpresa(matricula);
-                    const ehSubst = row.querySelector('[data-field="ehSubstituicao"]').value;
-                    pdfData.push([
-                        matriculaCompleta, getVal('[data-field="nome"]'), getVal('[data-field="setorOrigem"]'),
-                        getVal('[data-field="cargoAtual"]'), getVal('[data-field="codSetorDestino"]'),
-                        getVal('[data-field="setorDestino"]'), getVal('[data-field="cargoProposto"]'),
-                        getVal('[data-field="cargoLideranca"]'), getVal('[data-field="avaliacaoComportamental"]'),
-                        getVal('[data-field="dataAvaliacaoComp"]'), getVal('[data-field="emTreinamento"]'),
-                        getVal('[data-field="possuiCarta"]'), getVal('[data-field="dataInicio"]'),
-                        ehSubst,
-                        ehSubst === 'SIM' ? getMatriculaComEmpresa(row.querySelector('[data-field="matriculaSubstituto"]').value) : '',
-                        getVal('[data-field="nomeSubstituto"]'), getVal('[data-field="motivoSubstituicao"]'),
-                        getVal('[data-field="dataDesligamento"]')
-                    ]);
+                    rowsData.push(rowData);
                 });
 
-                doc.autoTable({
-                    head: headers, body: pdfData, startY: 30, theme: 'grid',
-                    styles: { fontSize: 6, cellPadding: 1, overflow: 'linebreak', halign: 'left' },
-                    headStyles: { fillColor: [30, 58, 95], textColor: 255, fontSize: 6, fontStyle: 'bold', halign: 'center' },
-                    columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 25 }, 7: { halign: 'center' }, 8: { halign: 'center' }, 10: { halign: 'center' }, 11: { halign: 'center' }, 13: { halign: 'center' } },
-                    margin: { top: 30, left: 5, right: 5, bottom: 10 }
-                });
-
-                const pageCount = doc.internal.getNumberOfPages();
-                for (let i = 1; i <= pageCount; i++) {
-                    doc.setPage(i);
-                    doc.setFontSize(8);
-                    doc.setTextColor(150);
-                    doc.text('Tabela criada e desenvolvida por Alan Silva com apoio de Gustavo Hülse e com a validação de Cristiane Covatti.', 148.5, 205, { align: 'center' });
-                }
-
-
-                const pdfBlob = doc.output('blob');
-                const pdfUrl = URL.createObjectURL(pdfBlob);
-                const pdfLink = document.createElement('a');
-                pdfLink.href = pdfUrl;
-                pdfLink.download = `Indicacoes_Promocao_${date}.pdf`;
-                document.body.appendChild(pdfLink);
-                pdfLink.click();
-                setTimeout(() => {
-                    document.body.removeChild(pdfLink);
-                    URL.revokeObjectURL(pdfUrl);
-                }, 100);
-
-                // --- 4. GERA E FAZ DOWNLOAD DO CSV ---
-                const csvHeaders = [
-                    'Matrícula', 'Nome Completo', 'Setor Atual', 'Cargo Atual', 'Cód. Setor Destino',
-                    'Setor de Destino', 'Cargo Proposto', 'Cargo de Liderança?', 'R&S fez Avaliação?',
-                    'Data Avaliação Comportamental', 'Em Treinamento?', 'Possui Carta?',
-                    'Data Início Treinamento', 'É Substituição?', 'Matrícula Substituído', 'Nome Substituído',
-                    'Motivo Substituição', 'Data Motivo Substituição'
-                ];
-
-                const empresaSelectEl = document.getElementById('empresa');
-                const empresaTextCSV = empresaSelectEl.options[empresaSelectEl.selectedIndex].text;
-                let csv = `Responsável: ${responsavel}\nEmpresa: ${empresaTextCSV}\n\n`;
-                csv += csvHeaders.join(';') + '\n';
-
-                document.querySelectorAll('#tableBody tr').forEach(row => {
-                    const matricula = row.querySelector('[data-field="matricula"]').value;
-                    if (!matricula) return;
-
-                    const matriculaCompleta = getMatriculaComEmpresa(matricula);
-                    const ehSubstituicao = row.querySelector('[data-field="ehSubstituicao"]').value;
-                    const matriculaSubst = row.querySelector('[data-field="matriculaSubstituto"]').value;
-                    const matriculaSubstCompleta = ehSubstituicao === 'SIM' && matriculaSubst ? getMatriculaComEmpresa(matriculaSubst) : matriculaSubst;
-
-                    const dataAvalInput = row.querySelector('[data-field="dataAvaliacaoComp"]');
-                    let dataAval = getDateFieldValue(dataAvalInput);
-                    if (dataAval && dataAval !== 'N/A') dataAval = convertDateForDisplay(dataAval);
-
-                    const dataInicioInput = row.querySelector('[data-field="dataInicio"]');
-                    let dataInicio = getDateFieldValue(dataInicioInput);
-                    if (dataInicio && dataInicio !== 'N/A') dataInicio = convertDateForDisplay(dataInicio);
-
-                    const dataDesligInput = row.querySelector('[data-field="dataDesligamento"]');
-                    let dataDeslig = getDateFieldValue(dataDesligInput);
-                    if (dataDeslig && dataDeslig !== 'N/A') dataDeslig = convertDateForDisplay(dataDeslig);
-
-                    const values = [
-                        matriculaCompleta,
-                        row.querySelector('[data-field="nome"]').value,
-                        row.querySelector('[data-field="setorOrigem"]').value,
-                        row.querySelector('[data-field="cargoAtual"]').value,
-                        row.querySelector('[data-field="codSetorDestino"]').value,
-                        row.querySelector('[data-field="setorDestino"]').value,
-                        row.querySelector('[data-field="cargoProposto"]').value,
-                        row.querySelector('[data-field="cargoLideranca"]').value,
-                        row.querySelector('[data-field="avaliacaoComportamental"]').value,
-                        dataAval,
-                        row.querySelector('[data-field="emTreinamento"]').value,
-                        row.querySelector('[data-field="possuiCarta"]').value,
-                        dataInicio,
-                        ehSubstituicao,
-                        matriculaSubstCompleta,
-                        row.querySelector('[data-field="nomeSubstituto"]').value,
-                        row.querySelector('[data-field="motivoSubstituicao"]').value,
-                        dataDeslig
-                    ].map(v => `"${(v || '').replace(/"/g, '""')}"`);
-
-                    csv += values.join(';') + '\n';
-                });
-
-                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-                const csvLink = document.createElement('a');
-                const csvUrl = URL.createObjectURL(blob);
-                csvLink.setAttribute('href', csvUrl);
-                csvLink.setAttribute('download', `Indicacoes_Promocao_${date}.csv`);
-                csvLink.style.visibility = 'hidden';
-                document.body.appendChild(csvLink);
-                csvLink.click();
-                setTimeout(() => {
-                    document.body.removeChild(csvLink);
-                    URL.revokeObjectURL(csvUrl);
-                }, 100);
+                const payload = {
+                    responsavelDestino: responsavelDestino,
+                    rows: rowsData
+                };
 
                 setTimeout(() => {
-                    // --- 5. MONTA E ABRE O THUNDERBIRD VIA MAILTO ---
-                    // Cria a data atual e adiciona 1 mês para obter o mês seguinte
-                    const dataProximoMes = new Date();
-                    dataProximoMes.setMonth(dataProximoMes.getMonth() + 1);
-
-                    // Formata a data do mês seguinte para "Mês AAAA" em português
-                    const mesAno = dataProximoMes.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-
-                    const assunto = `Indicações para o Comitê - ${mesAno}`;
-
-                    const corpo =
-                        `Ao Responsável de Remuneração e Performance,\n\n` +
-                        `Estamos enviando em anexo a Tabela de Indicações para o Comitê com as propostas de promoções/transferências referentes ao período de ${mesAno}.\n\n` +
-                        `Responsável: ${responsavel}\n` +
-                        `Empresa: ${empresaText}\n` +
-                        `Total de indicações: ${totalIndicacoes}\n\n` +
-                        `Arquivos em anexo:\n` +
-                        `✅ Indicacoes_Promocao_${date}.pdf (visualização)\n` +
-                        `✅ Indicacoes_Promocao_${date}.csv (processamento)\n\n` +
-                        `Ficamos à disposição para esclarecimentos.\n\n` +
-                        `Atenciosamente,\n${responsavel}`;
-
-                    let mailtoLink = `mailto:?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-
-                    // Abre o Thunderbird (ou cliente de e-mail padrão) com o assunto e corpo pré-preenchidos
-                    window.location.href = mailtoLink;
-
-                    // --- 6. ACESSO AO BANCO DE DADOS E AVISO FINAL ---
-                    const responsavelDestinoEl = document.getElementById('responsavel_destino');
-                    const responsavelDestino = responsavelDestinoEl && responsavelDestinoEl.selectedIndex >= 0 ? responsavelDestinoEl.options[responsavelDestinoEl.selectedIndex].text : '';
-
-                    const rowsData = [];
-                    const rows = document.querySelectorAll('#tableBody tr');
-                    rows.forEach(row => {
-                        const matricula = row.querySelector('[data-field="matricula"]').value;
-                        if (!matricula) return;
-
-                        const rowData = {
-                            matriculaCompleta: getMatriculaComEmpresa(matricula),
-                            nome: row.querySelector('[data-field="nome"]').value,
-                            setorOrigem: row.querySelector('[data-field="setorOrigem"]').value,
-                            setorDestino: row.querySelector('[data-field="setorDestino"]').value,
-                            cargoAtual: row.querySelector('[data-field="cargoAtual"]').value,
-                            cargoProposto: row.querySelector('[data-field="cargoProposto"]').value
-                        };
-                        rowsData.push(rowData);
-                    });
-
-                    const payload = {
-                        responsavelDestino: responsavelDestino,
-                        rows: rowsData
-                    };
-
-                    setTimeout(() => {
-                        fetch('/api/salvar', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        })
+                    fetch('/api/salvar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
                         .then(res => res.json())
                         .then(data => {
                             if (data.success) {
@@ -3109,13 +3113,13 @@
                         .catch(err => {
                             showCustomAlert('❌ Erro', 'Ocorreu um erro de conexão com o banco: ' + err);
                         });
-                    }, 500); 
-                    
-                }, 800); 
-            }
+                }, 500);
 
-</script>
-<!-- DARK MODE SCRIPT -->
+            }, 800);
+        }
+
+    </script>
+    <!-- DARK MODE SCRIPT -->
     <script>
         const darkModeStyles = `
             body.dark-mode { background-color: #121212 !important; color: #e0e0e0 !important; }

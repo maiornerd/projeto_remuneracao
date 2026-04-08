@@ -113,22 +113,48 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             margin-bottom: 20px;
             display: flex;
-            gap: 15px;
+            gap: 12px;
             flex-wrap: wrap;
+            align-items: flex-end;
         }
 
-        .filter-input {
-            padding: 8px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 13px;
-            outline: none;
-            min-width: 200px;
-            flex: 1;
-        }
+        .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 160px; }
+        .filter-group label { font-size: 11px; font-weight: bold; color: var(--primary-blue); margin-bottom: 3px; }
+        .filter-select { padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 12px; background: white; }
 
-        .filter-input:focus {
-            border-color: var(--secondary-blue);
+        /* Multi-select dropdown */
+        .multi-select-wrapper { position: relative; }
+        .multi-select-trigger {
+            padding: 6px 28px 6px 8px; border: 1px solid var(--border-color); border-radius: 4px;
+            font-size: 12px; background: white; cursor: pointer; min-height: 30px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            display: flex; align-items: center;
+        }
+        .multi-select-trigger::after {
+            content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            border: 5px solid transparent; border-top-color: #666; pointer-events: none;
+        }
+        .multi-select-dropdown {
+            display: none; position: absolute; top: 100%; left: 0; right: 0;
+            background: white; border: 1px solid var(--border-color); border-radius: 0 0 4px 4px;
+            max-height: 260px; overflow-y: auto; z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 220px;
+        }
+        .multi-select-dropdown.open { display: block; }
+        .multi-select-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px; cursor: pointer; font-size: 12px;
+            transition: background 0.15s;
+        }
+        .multi-select-item:hover { background: #e9ecef; }
+        .multi-select-item input[type="checkbox"] {
+            accent-color: var(--secondary-blue); width: 14px; height: 14px; cursor: pointer;
+        }
+        .multi-select-item.select-all { border-bottom: 1px solid var(--border-color); font-weight: 600; color: var(--primary-blue); }
+        .ms-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--secondary-blue); color: white; border-radius: 10px;
+            font-size: 10px; min-width: 18px; height: 18px; padding: 0 5px; margin-right: 4px;
         }
 
         table {
@@ -403,6 +429,7 @@
             background: rgba(0,0,0,0.6); z-index: 9999;
             justify-content: center; align-items: center;
         }
+
         .modal-historico.active { display: flex; }
         .modal-historico-content {
             background: white; border-radius: 12px;
@@ -595,16 +622,41 @@
 
         {% if indicacoes|length > 0 %}
         <div class="filters-container">
-            <h3 style="width: 100%; color: var(--primary-blue); margin-bottom: 5px; font-size: 15px;">🔍 Filtros Rápidos
-            </h3>
-            <input type="text" id="filterGestorAtual" class="filter-input" placeholder="Filtrar Gestor Atual"
-                onkeyup="applyFiltersAndPagination()">
-            <input type="text" id="filterGestorNovo" class="filter-input" placeholder="Filtrar Gestor Novo"
-                onkeyup="applyFiltersAndPagination()">
-            <input type="text" id="filterMatricula" class="filter-input" placeholder="Filtrar Matrícula"
-                onkeyup="applyFiltersAndPagination()">
-            <input type="text" id="filterMesAno" class="filter-input" placeholder="Filtrar Mês/Ano Mov."
-                onkeyup="applyFiltersAndPagination()">
+            <h3 style="width: 100%; color: var(--primary-blue); margin-bottom: 5px; font-size: 15px;">🔍 Filtros Rápidos</h3>
+            <div class="filter-group">
+                <label>Gestor Atual</label>
+                <select id="filterGestorAtual" class="filter-select" onchange="applyFiltersAndPagination()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Gestor Novo</label>
+                <select id="filterGestorNovo" class="filter-select" onchange="applyFiltersAndPagination()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Setor Destino</label>
+                <select id="filterSetorDest" class="filter-select" onchange="applyFiltersAndPagination()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Cargo Atual</label>
+                <div class="multi-select-wrapper" id="msCargoAtual">
+                    <div class="multi-select-trigger" onclick="toggleMsDropdown('msCargoAtual')">TODOS</div>
+                    <div class="multi-select-dropdown" id="ddCargoAtual"></div>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>Cargo Proposto</label>
+                <div class="multi-select-wrapper" id="msCargoProposto">
+                    <div class="multi-select-trigger" onclick="toggleMsDropdown('msCargoProposto')">TODOS</div>
+                    <div class="multi-select-dropdown" id="ddCargoProposto"></div>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select id="filterStatus" class="filter-select" onchange="applyFiltersAndPagination()"></select>
+            </div>
+            <div class="filter-group">
+                <label>Mês/Ano Mov.</label>
+                <select id="filterMesAno" class="filter-select" onchange="applyFiltersAndPagination()"></select>
+            </div>
         </div>
         {% endif %}
 
@@ -696,9 +748,9 @@
                     <td class="col-gestor-novo">{{ item.nome_gestor_destino }}</td>
                     <td class="col-matricula">{{ item.matricula_empregado }}</td>
                     <td class="col-nome">{{ item.nome_empregado }}</td>
-                    <td>{{ item.setor_destino }}</td>
-                    <td>{{ item.cargo_atual }}</td>
-                    <td>{{ item.cargo_proposto }}</td>
+                    <td class="col-setor-dest">{{ item.setor_destino }}</td>
+                    <td class="col-cargo-atual">{{ item.cargo_atual }}</td>
+                    <td class="col-cargo-proposto">{{ item.cargo_proposto }}</td>
                     <td class="col-mes">
                         {% if is_master %}
                         <input type="text" class="obs-input edit-mes" style="width: 100px; text-align: center; text-transform: uppercase;" value="{{ item.mes_ano }}">
@@ -713,7 +765,7 @@
                         <textarea class="obs-input edit-obs" rows="2">{{ item.observacao }}</textarea>
                     </td>
                     <td>
-                        <select class="status-select edit-status">
+                        <select class="status-select edit-status col-status-text">
                             <option value="Em análise" {% if item.status=='Em análise' %}selected{% endif %}>Em análise
                             </option>
                             <option value="Em Comitê" {% if item.status=='Em Comitê' %}selected{% endif %}>Em Comitê
@@ -747,7 +799,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <span class="status-badge" data-status="{{ item.status }}">{{ item.status }}</span>
+                        <span class="status-badge col-status-text" data-status="{{ item.status }}">{{ item.status }}</span>
                     </td>
 
                     {% endif %}
@@ -916,27 +968,182 @@
             document.getElementById('modalObservacao').classList.remove('active');
         }
 
+        // --- Multi-select helpers ---
+        let selectedCargoAtual = [];
+        let selectedCargoProposto = [];
+
+        function toggleMsDropdown(wrapperId) {
+            const dd = document.querySelector('#' + wrapperId + ' .multi-select-dropdown');
+            dd.classList.toggle('open');
+        }
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.multi-select-wrapper').forEach(w => {
+                if (!w.contains(e.target)) w.querySelector('.multi-select-dropdown').classList.remove('open');
+            });
+        });
+
+        function buildMultiSelect(ddId, items, selectedArr, label) {
+            const dd = document.getElementById(ddId);
+            if (!dd) return;
+            const sorted = Array.from(items).sort();
+            let html = `<label class="multi-select-item select-all"><input type="checkbox" onchange="toggleAllMs('${ddId}', this.checked)" ${selectedArr.length===0?'checked':''}> TODOS</label>`;
+            sorted.forEach(v => {
+                const chk = selectedArr.includes(v) ? 'checked' : '';
+                html += `<label class="multi-select-item"><input type="checkbox" value="${v}" onchange="onMsCheck('${ddId}', this)" ${chk}> ${v}</label>`;
+            });
+            dd.innerHTML = html;
+            updateMsTrigger(ddId, selectedArr, label);
+        }
+
+        function getSelectedArr(ddId) {
+            if (ddId === 'ddCargoAtual') return selectedCargoAtual;
+            return selectedCargoProposto;
+        }
+        function setSelectedArr(ddId, arr) {
+            if (ddId === 'ddCargoAtual') selectedCargoAtual = arr;
+            else selectedCargoProposto = arr;
+        }
+
+        function onMsCheck(ddId, cb) {
+            let arr = getSelectedArr(ddId);
+            if (cb.checked) { if (!arr.includes(cb.value)) arr.push(cb.value); }
+            else { arr = arr.filter(v => v !== cb.value); setSelectedArr(ddId, arr); }
+            const allCb = document.querySelector('#'+ddId+' .select-all input');
+            if (allCb) allCb.checked = (arr.length === 0);
+            const label = ddId === 'ddCargoAtual' ? 'cargos' : 'cargos';
+            updateMsTrigger(ddId, arr, label);
+            applyFiltersAndPagination();
+        }
+
+        function toggleAllMs(ddId, checked) {
+            if (checked) {
+                setSelectedArr(ddId, []);
+                document.querySelectorAll('#'+ddId+' input[type=checkbox]:not(.select-all input)').forEach(cb => {
+                    if(!cb.parentElement.classList.contains('select-all')) cb.checked = false;
+                });
+            }
+            const label = ddId === 'ddCargoAtual' ? 'cargos' : 'cargos';
+            updateMsTrigger(ddId, getSelectedArr(ddId), label);
+            applyFiltersAndPagination();
+        }
+
+        function updateMsTrigger(ddId, arr, label) {
+            const wrapper = document.getElementById(ddId).closest('.multi-select-wrapper');
+            const trigger = wrapper.querySelector('.multi-select-trigger');
+            if (arr.length === 0) trigger.innerHTML = 'TODOS';
+            else if (arr.length === 1) trigger.innerHTML = arr[0];
+            else trigger.innerHTML = `<span class="ms-badge">${arr.length}</span> ${label} selecionados`;
+        }
+
+        // --- Cascading filter data ---
+        let allRowsData = [];
+
+        function extractRowData(row) {
+            const statusEl = row.querySelector('.col-status-text');
+            const mesEl = row.querySelector('.col-mes');
+            const mesInput = mesEl ? mesEl.querySelector('input') : null;
+            return {
+                row: row,
+                gestorAtual: (row.querySelector('.col-gestor-atual') || {}).textContent?.trim() || '',
+                gestorNovo: (row.querySelector('.col-gestor-novo') || {}).textContent?.trim() || '',
+                setor: (row.querySelector('.col-setor-dest') || {}).textContent?.trim() || '',
+                cargoAtual: (row.querySelector('.col-cargo-atual') || {}).textContent?.trim() || '',
+                cargoProposto: (row.querySelector('.col-cargo-proposto') || {}).textContent?.trim() || '',
+                status: statusEl ? (statusEl.tagName === 'SELECT' ? statusEl.value : statusEl.textContent.trim()) : '',
+                mes: mesInput ? mesInput.value.trim() : (mesEl ? mesEl.textContent.trim() : '')
+            };
+        }
+
+        function initFilters() {
+            allRowsData = [];
+            document.querySelectorAll('.data-row').forEach(row => allRowsData.push(extractRowData(row)));
+            cascadeFilters();
+        }
+
+        function repopulateSelect(selectId, values, currentVal) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            sel.innerHTML = '<option value="">TODOS</option>';
+            let stillExists = false;
+            Array.from(values).sort().forEach(v => {
+                if (!v) return;
+                const opt = document.createElement('option');
+                opt.value = v; opt.textContent = v;
+                if (v === currentVal) { opt.selected = true; stillExists = true; }
+                sel.appendChild(opt);
+            });
+            if (!stillExists) sel.value = '';
+        }
+
+        function getFilteredSubset(skipField) {
+            const fAtual = skipField === 'gestorAtual' ? '' : (document.getElementById('filterGestorAtual')?.value || '');
+            const fNovo = skipField === 'gestorNovo' ? '' : (document.getElementById('filterGestorNovo')?.value || '');
+            const fSetor = skipField === 'setor' ? '' : (document.getElementById('filterSetorDest')?.value || '');
+            const fStatus = skipField === 'status' ? '' : (document.getElementById('filterStatus')?.value || '');
+            const fMes = skipField === 'mes' ? '' : (document.getElementById('filterMesAno')?.value || '');
+            const sCA = skipField === 'cargoAtual' ? [] : selectedCargoAtual;
+            const sCP = skipField === 'cargoProposto' ? [] : selectedCargoProposto;
+
+            return allRowsData.filter(d => {
+                return (!fAtual || d.gestorAtual === fAtual)
+                    && (!fNovo || d.gestorNovo === fNovo)
+                    && (!fSetor || d.setor === fSetor)
+                    && (sCA.length === 0 || sCA.includes(d.cargoAtual))
+                    && (sCP.length === 0 || sCP.includes(d.cargoProposto))
+                    && (!fStatus || d.status === fStatus)
+                    && (!fMes || d.mes === fMes);
+            });
+        }
+
+        function cascadeFilters() {
+            // For each filter, compute its available options based on ALL OTHER active filters
+            const fAtual = document.getElementById('filterGestorAtual')?.value || '';
+            const fNovo = document.getElementById('filterGestorNovo')?.value || '';
+            const fSetor = document.getElementById('filterSetorDest')?.value || '';
+            const fStatus = document.getElementById('filterStatus')?.value || '';
+            const fMes = document.getElementById('filterMesAno')?.value || '';
+
+            repopulateSelect('filterGestorAtual', new Set(getFilteredSubset('gestorAtual').map(d => d.gestorAtual)), fAtual);
+            repopulateSelect('filterGestorNovo', new Set(getFilteredSubset('gestorNovo').map(d => d.gestorNovo)), fNovo);
+            repopulateSelect('filterSetorDest', new Set(getFilteredSubset('setor').map(d => d.setor)), fSetor);
+            repopulateSelect('filterStatus', new Set(getFilteredSubset('status').map(d => d.status)), fStatus);
+            repopulateSelect('filterMesAno', new Set(getFilteredSubset('mes').map(d => d.mes)), fMes);
+
+            // Multi-selects: rebuild with options from matching subset
+            const subCA = getFilteredSubset('cargoAtual');
+            selectedCargoAtual = selectedCargoAtual.filter(v => subCA.some(d => d.cargoAtual === v));
+            buildMultiSelect('ddCargoAtual', new Set(subCA.map(d => d.cargoAtual)), selectedCargoAtual, 'cargos');
+
+            const subCP = getFilteredSubset('cargoProposto');
+            selectedCargoProposto = selectedCargoProposto.filter(v => subCP.some(d => d.cargoProposto === v));
+            buildMultiSelect('ddCargoProposto', new Set(subCP.map(d => d.cargoProposto)), selectedCargoProposto, 'cargos');
+        }
+
         // --- Filtros e Paginação ---
         function applyFiltersAndPagination() {
-            const filterAtual = document.getElementById('filterGestorAtual').value.toLowerCase();
-            const filterNovo = document.getElementById('filterGestorNovo').value.toLowerCase();
-            const filterMatr = document.getElementById('filterMatricula').value.toLowerCase();
-            const filterMes = document.getElementById('filterMesAno').value.toLowerCase();
+            cascadeFilters();
 
-            const allRows = document.querySelectorAll('.data-row');
+            const fAtual = document.getElementById('filterGestorAtual')?.value || '';
+            const fNovo = document.getElementById('filterGestorNovo')?.value || '';
+            const fSetor = document.getElementById('filterSetorDest')?.value || '';
+            const fStatus = document.getElementById('filterStatus')?.value || '';
+            const fMes = document.getElementById('filterMesAno')?.value || '';
+
             filteredRows = [];
 
-            allRows.forEach(row => {
-                const atual = row.querySelector('.col-gestor-atual').textContent.toLowerCase();
-                const novo = row.querySelector('.col-gestor-novo').textContent.toLowerCase();
-                const matr = row.querySelector('.col-matricula').textContent.toLowerCase();
-                const mes = row.querySelector('.col-mes').textContent.toLowerCase();
+            allRowsData.forEach(d => {
+                const match = (!fAtual || d.gestorAtual === fAtual)
+                    && (!fNovo || d.gestorNovo === fNovo)
+                    && (!fSetor || d.setor === fSetor)
+                    && (selectedCargoAtual.length === 0 || selectedCargoAtual.includes(d.cargoAtual))
+                    && (selectedCargoProposto.length === 0 || selectedCargoProposto.includes(d.cargoProposto))
+                    && (!fStatus || d.status === fStatus)
+                    && (!fMes || d.mes === fMes);
 
-                if (atual.includes(filterAtual) && novo.includes(filterNovo) && 
-                    matr.includes(filterMatr) && mes.includes(filterMes)) {
-                    filteredRows.push(row);
+                if (match) {
+                    filteredRows.push(d.row);
                 } else {
-                    row.style.display = 'none';
+                    d.row.style.display = 'none';
                 }
             });
 
@@ -1069,6 +1276,13 @@
             body.dark-mode tr:hover { background-color: #333 !important; }
             body.dark-mode .filters-container h3, body.dark-mode .header-bar h2 { color: #8ab4f8 !important; }
             body.dark-mode .header-bar h2 svg { stroke: #8ab4f8 !important; }
+            body.dark-mode .filter-group label { color: #8ab4f8 !important; }
+            body.dark-mode .multi-select-trigger { background-color: #2d2d2d !important; color: #e0e0e0 !important; border-color: #444 !important; }
+            body.dark-mode .multi-select-trigger::after { border-top-color: #aaa !important; }
+            body.dark-mode .multi-select-dropdown { background-color: #2d2d2d !important; border-color: #444 !important; }
+            body.dark-mode .multi-select-item { color: #e0e0e0 !important; }
+            body.dark-mode .multi-select-item:hover { background: #3a3a3a !important; }
+            body.dark-mode .multi-select-item.select-all { border-color: #555 !important; color: #8ab4f8 !important; }
         `;
         const styleSheet = document.createElement("style");
         styleSheet.innerText = darkModeStyles;
@@ -1105,6 +1319,7 @@
             }
             
             if (document.getElementById('filterGestorAtual')) {
+                initFilters();
                 applyFiltersAndPagination();
             }
         });

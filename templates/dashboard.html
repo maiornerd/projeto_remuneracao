@@ -303,7 +303,7 @@
                 gap: 10px;
                 width: 100%;
             }
-            
+
             .theme-toggle-btn.logout-btn {
                 margin-right: 0 !important;
             }
@@ -351,16 +351,16 @@
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script>
-        (function() {
+        (function () {
             const csrfToken = "{{ csrf_token() }}";
             const originalFetch = window.fetch;
-            window.fetch = function() {
+            window.fetch = function () {
                 let [resource, config] = arguments;
-                if(config === undefined) {
+                if (config === undefined) {
                     config = {};
                 }
-                if(config.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method.toUpperCase())) {
-                    if(config.headers === undefined) {
+                if (config.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method.toUpperCase())) {
+                    if (config.headers === undefined) {
                         config.headers = {};
                     }
                     config.headers['X-CSRFToken'] = csrfToken;
@@ -457,7 +457,8 @@
             {% if tipo != 'simples' %}
             <a href="{{ url_for('efetivo') }}" class="menu-card">
                 <div class="icon-circle icon-green">
-                    <svg viewBox="0 0 24 24" style="stroke: #10B981; fill: none; stroke-linecap: round; stroke-linejoin: round;">
+                    <svg viewBox="0 0 24 24"
+                        style="stroke: #10B981; fill: none; stroke-linecap: round; stroke-linejoin: round;">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="12" y1="16" x2="12" y2="12"></line>
                         <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -477,7 +478,8 @@
             {% if tipo != 'simples' %}
             <a href="{{ url_for('comparativo') }}" class="menu-card">
                 <div class="icon-circle icon-yellow" style="background: #e0e7ff;">
-                    <svg viewBox="0 0 24 24" style="stroke: #3b82f6; fill: none; stroke-linecap: round; stroke-linejoin: round;">
+                    <svg viewBox="0 0 24 24"
+                        style="stroke: #3b82f6; fill: none; stroke-linecap: round; stroke-linejoin: round;">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
                         <line x1="9" y1="9" x2="9.01" y2="9"></line>
@@ -564,7 +566,7 @@
         {% endblock %}
     </div>
 
-        </div>
+    </div>
     </div>
 
     <div class="footer">
